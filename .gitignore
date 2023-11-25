@@ -18,3 +18,4 @@ Cargo.lock
 # Added by cargo
 
 /target
+/data/
