@@ -13,5 +13,5 @@ fn main() {
     println!("{:?}", t.get("hey"));
     println!("{:?}", t.get("he"));
 
-    println!("{:?}", t.get_by_prefix("he"));
+    println!("{:?}", t.get_by_prefix("hel"));
 }
