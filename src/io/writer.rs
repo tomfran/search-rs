@@ -1,28 +1,58 @@
-use std::fs::File;
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+};
 
-const BUFFER_SIZE: usize = 1024;
+const BUFFER_SIZE: u32 = 128;
 
 #[allow(dead_code)]
 pub struct Writer {
-    file: File,
+    file: BufWriter<File>,
     buffer: u128,
-    free: u16,
-    vec_buffer: [u128; BUFFER_SIZE],
+    written: u32,
 }
 
 #[allow(dead_code)]
 impl Writer {
     pub fn new(filename: &str) -> Writer {
-        let file = File::create(filename).unwrap();
-        let buffer = 0;
-        let free = 128;
-        let vec_buffer: [u128; BUFFER_SIZE] = [0; BUFFER_SIZE];
         Writer {
-            file,
-            buffer,
-            free,
-            vec_buffer,
+            file: BufWriter::new(File::create(filename).expect("Can not create output file")),
+            buffer: 0,
+            written: 0,
         }
+    }
+
+    pub fn write_int(&mut self, n: u32) {
+        let free = BUFFER_SIZE - self.written;
+
+        let (gamma, len) = Writer::int_to_gamma(n + 1);
+        self.buffer |= (gamma as u128) << self.written;
+
+        if free > len {
+            self.written += len;
+            return;
+        }
+
+        self.update_buffer();
+        if len > free {
+            self.buffer |= (gamma as u128) >> (len - free);
+            self.written += len - free;
+        }
+    }
+
+    pub fn update_buffer(&mut self) {
+        self.file
+            .write_all(&self.buffer.to_be_bytes())
+            .expect("error while writing buffer to BufWriter");
+
+        self.buffer = 0;
+        self.written = 0;
+    }
+
+    pub fn flush(&mut self) {
+        self.file
+            .flush()
+            .expect("error while flushing BufWriter buffer");
     }
 
     pub fn int_to_gamma(n: u32) -> (u64, u32) {
