@@ -29,7 +29,7 @@ impl Reader {
 
     pub fn read_gamma(&mut self) -> u32 {
         let len = self.read_unary() - 1;
-        (self.read_len(len) as u32 | (1 << len)) - 1
+        (self.read_internal(len) as u32 | (1 << len)) - 1
     }
 
     fn read_unary(&mut self) -> u32 {
@@ -48,7 +48,24 @@ impl Reader {
         zeros + 1
     }
 
-    fn read_len(&mut self, len: u32) -> u128 {
+    pub fn read_vbyte(&mut self) -> u32 {
+        let mut res = 0;
+
+        let mask = (1 << 7) - 1;
+        let mut byte_num = 0;
+
+        let mut exit = false;
+        while !exit {
+            let byte = self.read_internal(8);
+            res |= (byte & mask) << (7 * byte_num);
+
+            byte_num += 1;
+            exit = byte & (1 << 7) != 0;
+        }
+        res as u32 - 1
+    }
+
+    fn read_internal(&mut self, len: u32) -> u128 {
         let mask = (1 << len) - 1;
 
         let remaining = BUFFER_SIZE - self.read;
@@ -60,7 +77,7 @@ impl Reader {
             self.fill_buffer();
 
             let delta = len - remaining;
-            res |= self.read_len(delta) << remaining;
+            res |= self.read_internal(delta) << remaining;
 
             return res;
         }
@@ -85,22 +102,29 @@ mod test {
     use std::fs::create_dir_all;
 
     use super::*;
-    use crate::io::writer::Writer;
+    use crate::bits::writer::Writer;
 
     #[test]
     fn test_read_gamma() {
         create_dir_all("data/test/").expect("error while creating test dir");
 
-        let mut w = Writer::new("data/test/writer.bin");
+        let mut w = Writer::new("data/test/writer_unit.bin");
         for i in 1..100 {
             w.write_gamma(i);
         }
+        for i in 1..100 {
+            w.write_vbyte(i);
+        }
         w.flush();
 
-        let mut r = Reader::new("data/test/writer.bin");
+        let mut r = Reader::new("data/test/writer_unit.bin");
 
         for i in 1..100 {
             let a = r.read_gamma();
+            assert_eq!(i, a);
+        }
+        for i in 1..100 {
+            let a = r.read_vbyte();
             assert_eq!(i, a);
         }
     }

@@ -40,20 +40,20 @@ impl Writer {
     }
 
     fn int_to_vbyte(n: u32) -> (u128, u32) {
-        let mut vbyte: u32 = 0;
+        let mut vbyte: u128 = 0;
 
         let mut n = n;
         let mut byte_num = 0;
         let mask = (1 << 7) - 1;
 
         while n > 0 {
-            vbyte |= (n & mask) << (8 * byte_num);
+            vbyte |= ((n & mask) as u128) << (8 * byte_num);
             n >>= 7;
             byte_num += 1;
         }
         vbyte |= 1 << (8 * byte_num - 1);
 
-        (vbyte as u128, 8 * byte_num)
+        (vbyte, 8 * byte_num)
     }
 
     fn write_internal(&mut self, payload: u128, len: u32) {
@@ -95,6 +95,8 @@ impl Writer {
 #[cfg(test)]
 mod test {
 
+    use std::fs::create_dir_all;
+
     use super::*;
 
     #[test]
@@ -121,6 +123,8 @@ mod test {
 
     #[test]
     fn test_buffer_overflow() {
+        create_dir_all("data/test/").expect("error while creating test dir");
+
         let word = (1 << 10) - 1;
         let len = 10;
 
