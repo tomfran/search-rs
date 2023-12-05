@@ -67,7 +67,7 @@ impl Writer {
 
         self.update_buffer();
         if len > free {
-            self.buffer |= payload >> (len - free);
+            self.buffer |= payload >> free;
             self.written += len - free;
         }
     }
@@ -117,5 +117,20 @@ mod test {
         let (vb, l) = Writer::int_to_vbyte(1);
         assert_eq!(format!("{vb:b}"), "10000001");
         assert_eq!(l, 8);
+    }
+
+    #[test]
+    fn test_buffer_overflow() {
+        let word = (1 << 10) - 1;
+        let len = 10;
+
+        let mut w = Writer::new("data/test/writer.bin");
+        w.written = 125;
+
+        w.write_internal(word, len);
+
+        let b = w.buffer;
+        println!("{:b}", b);
+        assert_eq!(b, (1 << 7) - 1)
     }
 }
