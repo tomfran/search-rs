@@ -3,16 +3,12 @@ use std::{
     io::{BufWriter, Write},
 };
 
-const BUFFER_SIZE: u32 = 128;
-
-#[allow(dead_code)]
 pub struct Writer {
     file: BufWriter<File>,
     buffer: u128,
     written: u32,
 }
 
-#[allow(dead_code)]
 impl Writer {
     pub fn new(filename: &str) -> Writer {
         Writer {
@@ -22,9 +18,9 @@ impl Writer {
         }
     }
 
-    pub fn write_gamma(&mut self, n: u32) {
+    pub fn write_gamma(&mut self, n: u32) -> u64 {
         let (gamma, len) = Writer::int_to_gamma(n + 1);
-        self.write_internal(gamma, len);
+        self.write_internal(gamma, len)
     }
 
     fn int_to_gamma(n: u32) -> (u128, u32) {
@@ -34,9 +30,9 @@ impl Writer {
         (gamma, 2 * msb + 1)
     }
 
-    pub fn write_vbyte(&mut self, n: u32) {
+    pub fn write_vbyte(&mut self, n: u32) -> u64 {
         let (vbyte, len) = Writer::int_to_vbyte(n + 1);
-        self.write_internal(vbyte, len);
+        self.write_internal(vbyte, len)
     }
 
     fn int_to_vbyte(n: u32) -> (u128, u32) {
@@ -56,25 +52,26 @@ impl Writer {
         (vbyte, 8 * byte_num)
     }
 
-    fn write_internal(&mut self, payload: u128, len: u32) {
-        let free = BUFFER_SIZE - self.written;
+    fn write_internal(&mut self, payload: u128, len: u32) -> u64 {
+        let free = 128 - self.written;
         self.buffer |= payload << self.written;
 
         if free > len {
             self.written += len;
-            return;
+        } else {
+            self.update_buffer();
+            if len > free {
+                self.buffer |= payload >> free;
+                self.written += len - free;
+            }
         }
 
-        self.update_buffer();
-        if len > free {
-            self.buffer |= payload >> free;
-            self.written += len - free;
-        }
+        len as u64
     }
 
     fn update_buffer(&mut self) {
         self.file
-            .write_all(&self.buffer.to_be_bytes())
+            .write_all(&self.buffer.to_le_bytes())
             .expect("error while writing buffer to BufWriter");
 
         self.buffer = 0;
@@ -86,6 +83,7 @@ impl Writer {
             self.update_buffer();
         }
 
+        self.update_buffer();
         self.file
             .flush()
             .expect("error while flushing BufWriter buffer");
@@ -95,9 +93,8 @@ impl Writer {
 #[cfg(test)]
 mod test {
 
-    use std::fs::create_dir_all;
-
     use super::*;
+    use std::fs::create_dir_all;
 
     #[test]
     fn test_gamma_coding() {

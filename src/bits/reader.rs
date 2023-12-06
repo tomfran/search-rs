@@ -1,12 +1,10 @@
 use std::{
     fs::File,
-    io::{BufReader, Read},
+    io::{BufReader, Read, Seek, SeekFrom},
 };
 
-#[allow(dead_code)]
 const BUFFER_SIZE: u32 = 128;
 
-#[allow(dead_code)]
 pub struct Reader {
     file: BufReader<File>,
     buffer: u128,
@@ -14,7 +12,6 @@ pub struct Reader {
     read: u32,
 }
 
-#[allow(dead_code)]
 impl Reader {
     pub fn new(filename: &str) -> Reader {
         let mut r = Reader {
@@ -91,41 +88,68 @@ impl Reader {
             .read_exact(&mut self.byte_buffer)
             .expect("error while filling byte buffer");
 
-        self.buffer = u128::from_be_bytes(self.byte_buffer);
+        self.buffer = u128::from_le_bytes(self.byte_buffer);
         self.read = 0;
+    }
+
+    pub fn seek(&mut self, bit_offset: u64) {
+        let byte_seek = bit_offset / 8;
+        let remainder_seek = bit_offset % 8;
+
+        self.file
+            .seek(SeekFrom::Start(byte_seek))
+            .expect("error while seeking reader");
+
+        self.fill_buffer();
+        if remainder_seek > 0 {
+            self.read_internal(remainder_seek as u32);
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
 
-    use std::fs::create_dir_all;
-
     use super::*;
     use crate::bits::writer::Writer;
+    use std::fs::create_dir_all;
 
     #[test]
-    fn test_read_gamma() {
+    fn test_read() {
         create_dir_all("data/test/").expect("error while creating test dir");
 
         let mut w = Writer::new("data/test/writer_unit.bin");
-        for i in 1..100 {
-            w.write_gamma(i);
-        }
-        for i in 1..100 {
+
+        (1..100).for_each(|i| {
             w.write_vbyte(i);
-        }
+        });
+
+        (1..100).for_each(|i| {
+            w.write_gamma(i);
+        });
+
         w.flush();
 
         let mut r = Reader::new("data/test/writer_unit.bin");
 
-        for i in 1..100 {
-            let a = r.read_gamma();
-            assert_eq!(i, a);
-        }
-        for i in 1..100 {
-            let a = r.read_vbyte();
-            assert_eq!(i, a);
-        }
+        (1..100).for_each(|i| assert_eq!(i, r.read_vbyte()));
+        (1..100).for_each(|i| assert_eq!(i, r.read_gamma()));
+    }
+
+    #[test]
+    fn test_seek() {
+        create_dir_all("data/test/").expect("error while creating test dir");
+
+        let mut w = Writer::new("data/test/writer_seek.bin");
+
+        let offset = (0..1000).map(|i| w.write_gamma(i)).sum();
+        w.write_gamma(10);
+
+        w.flush();
+
+        let mut r = Reader::new("data/test/writer_seek.bin");
+
+        r.seek(offset);
+        assert_eq!(r.read_gamma(), 10);
     }
 }
