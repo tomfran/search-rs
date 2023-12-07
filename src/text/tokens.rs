@@ -1,6 +1,6 @@
 use regex::Regex;
 
-pub fn tokenize(s: &str, re: Regex) -> Vec<String> {
+pub fn tokenize(s: &String, re: &Regex) -> Vec<String> {
     let vec: Vec<String> = re
         .replace_all(s, "")
         .to_lowercase()
@@ -23,7 +23,7 @@ mod test {
     #[test]
     fn test_tokenization() {
         let r = build_tokenization_regex();
-        let mut t = tokenize("123#Hello, __World!", r);
+        let mut t = tokenize(&"123#Hello, __World!".to_string(), &r);
         t.sort();
 
         assert_eq!(t, ["hello", "world"]);

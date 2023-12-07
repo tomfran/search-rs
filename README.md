@@ -4,11 +4,13 @@ Search engine written in Rust, based on an inverted index on disk.
 
 **Implementation status** 
 - [x] IO classes for writing and reading bit-streams;
-- [ ] Structure to hold the vocabulary;
-- [ ] Text preprocessing;
-- [ ] In-memory datasets index construction;
-- [ ] Disk-based partial index construction and merging;
-- [ ] Additional indexes to support things such as spelling correction.
+- [ ] Text preprocessing: 
+  - [x] Tokenization;
+  - [ ] Stemming.
+- [ ] Index construction:
+  - [ ] [In progress] In-memory datasets index construction;
+  - [ ] Disk-based partial index construction and merging;
+  - [ ] Additional indexes to support things such as spelling correction.
 
 **References**
 
