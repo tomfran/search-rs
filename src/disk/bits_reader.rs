@@ -5,16 +5,16 @@ use std::{
 
 const BUFFER_SIZE: u32 = 128;
 
-pub struct Reader {
+pub struct BitsReader {
     file: BufReader<File>,
     buffer: u128,
     byte_buffer: [u8; 16],
     read: u32,
 }
 
-impl Reader {
-    pub fn new(filename: &str) -> Reader {
-        let mut r = Reader {
+impl BitsReader {
+    pub fn new(filename: &str) -> BitsReader {
+        let mut r = BitsReader {
             file: BufReader::new(File::open(filename).expect("can not open input file")),
             buffer: 0,
             byte_buffer: [0; 16],
@@ -111,14 +111,14 @@ impl Reader {
 mod test {
 
     use super::*;
-    use crate::bits::writer::Writer;
+    use crate::disk::bits_writer::BitsWriter;
     use std::fs::create_dir_all;
 
     #[test]
     fn test_read() {
         create_dir_all("data/test/").expect("error while creating test dir");
 
-        let mut w = Writer::new("data/test/writer_unit.bin");
+        let mut w = BitsWriter::new("data/test/writer_unit.bin");
 
         (1..100).for_each(|i| {
             w.write_vbyte(i);
@@ -130,7 +130,7 @@ mod test {
 
         w.flush();
 
-        let mut r = Reader::new("data/test/writer_unit.bin");
+        let mut r = BitsReader::new("data/test/writer_unit.bin");
 
         (1..100).for_each(|i| assert_eq!(i, r.read_vbyte()));
         (1..100).for_each(|i| assert_eq!(i, r.read_gamma()));
@@ -140,14 +140,14 @@ mod test {
     fn test_seek() {
         create_dir_all("data/test/").expect("error while creating test dir");
 
-        let mut w = Writer::new("data/test/writer_seek.bin");
+        let mut w = BitsWriter::new("data/test/writer_seek.bin");
 
         let offset = (0..1000).map(|i| w.write_gamma(i)).sum();
         w.write_gamma(10);
 
         w.flush();
 
-        let mut r = Reader::new("data/test/writer_seek.bin");
+        let mut r = BitsReader::new("data/test/writer_seek.bin");
 
         r.seek(offset);
         assert_eq!(r.read_gamma(), 10);

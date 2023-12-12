@@ -1,5 +1,5 @@
 use rand::Rng;
-use search::bits::{reader::Reader, writer::Writer};
+use search::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 use std::fs::create_dir_all;
 
 #[test]
@@ -14,7 +14,7 @@ fn test_read_write() {
     let values: Vec<u32> = (0..n).map(|_| rng.gen_range(0..u32::MAX - 1)).collect();
     let mut coding: Vec<u32> = (0..n).map(|_| rng.gen()).collect();
 
-    let mut writer = Writer::new(path);
+    let mut writer = BitsWriter::new(path);
 
     writer.write_vbyte(n);
 
@@ -27,7 +27,7 @@ fn test_read_write() {
     });
     writer.flush();
 
-    let mut reader = Reader::new(path);
+    let mut reader = BitsReader::new(path);
     assert_eq!(n, reader.read_vbyte());
 
     values.iter().zip(coding.iter_mut()).for_each(|(v, c)| {

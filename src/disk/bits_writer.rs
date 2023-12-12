@@ -3,15 +3,15 @@ use std::{
     io::{BufWriter, Write},
 };
 
-pub struct Writer {
+pub struct BitsWriter {
     file: BufWriter<File>,
     buffer: u128,
     written: u32,
 }
 
-impl Writer {
-    pub fn new(filename: &str) -> Writer {
-        Writer {
+impl BitsWriter {
+    pub fn new(filename: &str) -> BitsWriter {
+        BitsWriter {
             file: BufWriter::new(File::create(filename).expect("Can not create output file")),
             buffer: 0,
             written: 0,
@@ -19,7 +19,7 @@ impl Writer {
     }
 
     pub fn write_gamma(&mut self, n: u32) -> u64 {
-        let (gamma, len) = Writer::int_to_gamma(n + 1);
+        let (gamma, len) = BitsWriter::int_to_gamma(n + 1);
         self.write_internal(gamma, len)
     }
 
@@ -31,7 +31,7 @@ impl Writer {
     }
 
     pub fn write_vbyte(&mut self, n: u32) -> u64 {
-        let (vbyte, len) = Writer::int_to_vbyte(n + 1);
+        let (vbyte, len) = BitsWriter::int_to_vbyte(n + 1);
         self.write_internal(vbyte, len)
     }
 
@@ -98,22 +98,22 @@ mod test {
 
     #[test]
     fn test_gamma_coding() {
-        let (g, l) = Writer::int_to_gamma(1);
+        let (g, l) = BitsWriter::int_to_gamma(1);
         assert_eq!(format!("{g:b}"), "1");
         assert_eq!(l, 1);
 
-        let (g, l) = Writer::int_to_gamma(7);
+        let (g, l) = BitsWriter::int_to_gamma(7);
         assert_eq!(format!("{g:b}"), "11100");
         assert_eq!(l, 5);
     }
 
     #[test]
     fn test_vbyte_coding() {
-        let (vb, l) = Writer::int_to_vbyte(1024);
+        let (vb, l) = BitsWriter::int_to_vbyte(1024);
         assert_eq!(format!("{vb:b}"), "1000100000000000");
         assert_eq!(l, 16);
 
-        let (vb, l) = Writer::int_to_vbyte(1);
+        let (vb, l) = BitsWriter::int_to_vbyte(1);
         assert_eq!(format!("{vb:b}"), "10000001");
         assert_eq!(l, 8);
     }
@@ -125,7 +125,7 @@ mod test {
         let word = (1 << 10) - 1;
         let len = 10;
 
-        let mut w = Writer::new("data/test/writer.bin");
+        let mut w = BitsWriter::new("data/test/writer.bin");
         w.written = 125;
 
         w.write_internal(word, len);

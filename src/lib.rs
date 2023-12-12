@@ -1,3 +1,3 @@
-pub mod bits;
-pub mod index;
+pub mod disk;
+pub mod indexer;
 pub mod text;
