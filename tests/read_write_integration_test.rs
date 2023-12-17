@@ -1,11 +1,8 @@
 use rand::Rng;
 use search::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
-use std::fs::create_dir_all;
 
 #[test]
 fn test_read_write() {
-    create_dir_all("data/test/").expect("error while creating test dir");
-
     let path = "data/test/writer_io_integration.bin";
 
     let n = 100_000;

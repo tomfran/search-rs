@@ -3,6 +3,8 @@ use std::{
     io::{BufWriter, Write},
 };
 
+use super::file_utils;
+
 pub struct BitsWriter {
     file: BufWriter<File>,
     buffer: u128,
@@ -10,9 +12,9 @@ pub struct BitsWriter {
 }
 
 impl BitsWriter {
-    pub fn new(filename: &str) -> BitsWriter {
+    pub fn new(path: &str) -> BitsWriter {
         BitsWriter {
-            file: BufWriter::new(File::create(filename).expect("Can not create output file")),
+            file: BufWriter::new(file_utils::create_and_open_file(path)),
             buffer: 0,
             written: 0,
         }
@@ -94,7 +96,6 @@ impl BitsWriter {
 mod test {
 
     use super::*;
-    use std::fs::create_dir_all;
 
     #[test]
     fn test_gamma_coding() {
@@ -120,8 +121,6 @@ mod test {
 
     #[test]
     fn test_buffer_overflow() {
-        create_dir_all("data/test/").expect("error while creating test dir");
-
         let word = (1 << 10) - 1;
         let len = 10;
 

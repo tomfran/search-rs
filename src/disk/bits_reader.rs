@@ -112,12 +112,9 @@ mod test {
 
     use super::*;
     use crate::disk::bits_writer::BitsWriter;
-    use std::fs::create_dir_all;
 
     #[test]
     fn test_read() {
-        create_dir_all("data/test/").expect("error while creating test dir");
-
         let mut w = BitsWriter::new("data/test/writer_unit.bin");
 
         (1..100).for_each(|i| {
@@ -138,8 +135,6 @@ mod test {
 
     #[test]
     fn test_seek() {
-        create_dir_all("data/test/").expect("error while creating test dir");
-
         let mut w = BitsWriter::new("data/test/writer_seek.bin");
 
         let offset = (0..1000).map(|i| w.write_gamma(i)).sum();

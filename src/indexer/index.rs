@@ -43,13 +43,19 @@ impl Index {
 mod test {
     use super::*;
 
-    // #[test]
+    #[test]
     fn test_build() {
-        Index::build_index("data/dummy/docs", "data/dummy/index/dum");
+        Index::build_index(
+            "data/index_unit_test/docs",
+            "data/index_unit_test/index/test",
+        );
 
-        let mut idx = Index::load_index("data/dummy/index/dum");
+        let mut idx = Index::load_index("data/index_unit_test/index/test");
 
-        println!("{:?}", idx.terms_to_offsets);
-        println!("{:?}", idx.get_postings("my"));
+        for ele in ["hello", "man", "world"] {
+            assert!(idx.terms_to_offsets.contains_key(ele));
+        }
+
+        assert_eq!(idx.get_postings("hello").unwrap(), [0, 1]);
     }
 }

@@ -16,6 +16,9 @@ Cargo.lock
 .idea
 
 # Added by cargo
-
 /target
-/data/
+
+# Data files
+/data/wiki-data
+/data/index_unit_test/index
+/data/test

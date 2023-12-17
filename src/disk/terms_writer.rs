@@ -3,14 +3,16 @@ use std::{
     io::{BufWriter, Write},
 };
 
+use super::file_utils;
+
 pub struct TermsWriter {
     file: BufWriter<File>,
 }
 
 impl TermsWriter {
-    pub fn new(filename: &str) -> TermsWriter {
+    pub fn new(path: &str) -> TermsWriter {
         TermsWriter {
-            file: BufWriter::new(File::create(filename).expect("Can not create output file")),
+            file: BufWriter::new(file_utils::create_and_open_file(path)),
         }
     }
 

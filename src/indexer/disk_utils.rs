@@ -19,9 +19,7 @@ pub fn build_in_memory_postings(
     let documents =
         fs::read_dir(input_dir).expect("error while retrieving input directory content");
 
-    println!("{:?}", documents);
     let tokens_regex = tokens::build_tokenization_regex();
-
     let tokenized_docs_iter = documents
         .into_iter()
         .map(|p| p.unwrap())
@@ -61,9 +59,9 @@ pub fn write_postings(
     output_path: &str,
 ) {
     let postings_path = output_path.to_string() + POSTINGS_EXTENSION;
-    let offsets_path = output_path.to_string() + OFFSETS_EXTENSION;
-
     let mut postings_writer = BitsWriter::new(&postings_path);
+
+    let offsets_path = output_path.to_string() + OFFSETS_EXTENSION;
     let mut offsets_writer = BitsWriter::new(&offsets_path);
 
     let mut offset: u64 = 0;
@@ -91,11 +89,11 @@ pub fn write_postings(
 }
 
 pub fn write_vocabulary(vocab: &BTreeMap<String, usize>, output_path: &str) {
-    let alphas_path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
-    let lenghts_path = output_path.to_string() + VOCABULARY_LENGHTS_EXTENSION;
+    let terms_path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
+    let mut terms_writer = TermsWriter::new(&terms_path);
 
+    let lenghts_path = output_path.to_string() + VOCABULARY_LENGHTS_EXTENSION;
     let mut lenghts_writer = BitsWriter::new(&lenghts_path);
-    let mut terms_writer = TermsWriter::new(&alphas_path);
 
     for term in vocab.keys() {
         lenghts_writer.write_gamma(term.len() as u32);
@@ -107,32 +105,34 @@ pub fn write_vocabulary(vocab: &BTreeMap<String, usize>, output_path: &str) {
 }
 
 pub fn read_terms_to_offsets_map(input_path: &str) -> BTreeMap<String, u64> {
-    let alphas_path: String = input_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
-    let lenghts_path = input_path.to_string() + VOCABULARY_LENGHTS_EXTENSION;
-    let offsets_path = input_path.to_string() + OFFSETS_EXTENSION;
+    let terms_path: String = input_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
+    let terms_buffer = TermsReader::new(&terms_path).read_to_string();
 
-    let mut offsets_reader = BitsReader::new(&offsets_path);
-    let terms_buffer = TermsReader::new(&alphas_path).read_to_string();
+    let lenghts_path = input_path.to_string() + VOCABULARY_LENGHTS_EXTENSION;
     let mut lenghts_reader = BitsReader::new(&lenghts_path);
 
-    let n = offsets_reader.read_vbyte();
+    let offsets_path = input_path.to_string() + OFFSETS_EXTENSION;
+    let mut offsets_reader = BitsReader::new(&offsets_path);
+
+    let num_terms: u32 = offsets_reader.read_vbyte();
 
     let mut start_term_offset: usize = 0;
     let mut postings_offset = 0;
 
     let mut res: BTreeMap<String, u64> = BTreeMap::new();
 
-    for _ in 0..n {
-        let terms_delta = lenghts_reader.read_gamma() as usize;
-        let x = offsets_reader.read_gamma() as u64;
-        postings_offset += x;
+    for _ in 0..num_terms {
+        let term_length = lenghts_reader.read_gamma() as usize;
+
+        let postings_offset_delta = offsets_reader.read_gamma() as u64;
+        postings_offset += postings_offset_delta;
 
         res.insert(
-            terms_buffer[start_term_offset..start_term_offset + terms_delta].to_string(),
+            terms_buffer[start_term_offset..start_term_offset + term_length].to_string(),
             postings_offset,
         );
 
-        start_term_offset += terms_delta;
+        start_term_offset += term_length;
     }
 
     res
