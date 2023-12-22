@@ -8,9 +8,12 @@ Search engine written in Rust, based on an inverted index on disk.
   - [x] Tokenization;
   - [ ] Stemming.
 - [ ] Index construction:
-  - [ ] [In progress] In-memory datasets index construction;
+  - [x] In-memory datasets index construction;
   - [ ] Disk-based partial index construction and merging;
   - [ ] Additional indexes to support things such as spelling correction.
+- [ ] Index queries:
+  - [ ] Boolean queries;
+  - [ ] Tf-idf ranked retrieval.
 
 **References**
 

@@ -1,11 +1,12 @@
-use crate::{
-    disk::{
-        bits_reader::BitsReader, bits_writer::BitsWriter, terms_reader::TermsReader,
-        terms_writer::TermsWriter,
-    },
-    text::tokens,
+use tokenizers::Tokenizer;
+
+use crate::disk::{
+    bits_reader::BitsReader, bits_writer::BitsWriter, terms_reader::TermsReader,
+    terms_writer::TermsWriter,
 };
 use std::{collections::BTreeMap, fs};
+
+use super::text_utils;
 
 const POSTINGS_EXTENSION: &str = ".postings";
 const OFFSETS_EXTENSION: &str = ".offsets";
@@ -15,16 +16,16 @@ const VOCABULARY_LENGHTS_EXTENSION: &str = ".lengths";
 
 pub fn build_in_memory_postings(
     input_dir: &str,
+    tokenizer: &Tokenizer,
 ) -> (BTreeMap<String, usize>, Vec<BTreeMap<u32, u32>>) {
     let documents =
         fs::read_dir(input_dir).expect("error while retrieving input directory content");
 
-    let tokens_regex = tokens::build_tokenization_regex();
     let tokenized_docs_iter = documents
         .into_iter()
         .map(|p| p.unwrap())
         .map(|p| fs::read_to_string(p.path()).expect("error while reading file"))
-        .map(|s| tokens::tokenize(&s, &tokens_regex));
+        .map(|s| text_utils::tokenize(tokenizer, &s));
 
     let mut words: BTreeMap<String, usize> = BTreeMap::new();
     let mut in_memory_postings: Vec<BTreeMap<u32, u32>> = Vec::new();

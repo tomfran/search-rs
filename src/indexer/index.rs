@@ -1,4 +1,4 @@
-use super::disk_utils;
+use super::{disk_utils, text_utils::load_tokenizer};
 use crate::disk::bits_reader::BitsReader;
 use std::collections::BTreeMap;
 
@@ -8,8 +8,10 @@ pub struct Index {
 }
 
 impl Index {
-    pub fn build_index(input_dir: &str, output_path: &str) {
-        let (words, postings) = disk_utils::build_in_memory_postings(input_dir);
+    pub fn build_index(input_dir: &str, output_path: &str, tokenizer_path: &str) {
+        let tokenizer = load_tokenizer(tokenizer_path, false);
+        let (words, postings) = disk_utils::build_in_memory_postings(input_dir, &tokenizer);
+
         disk_utils::write_postings(&words, &postings, output_path);
         disk_utils::write_vocabulary(&words, output_path);
     }
@@ -48,6 +50,7 @@ mod test {
         Index::build_index(
             "data/index_unit_test/docs",
             "data/index_unit_test/index/test",
+            "data/index_unit_test/test_tokenizer",
         );
 
         let mut idx = Index::load_index("data/index_unit_test/index/test");
