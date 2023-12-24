@@ -20,6 +20,16 @@ pub struct Index {
     tokenizer: Tokenizer,
 }
 
+pub struct PostingList {
+    documents: Vec<PostingEntry>,
+    collection_frequency: u32,
+}
+
+pub struct PostingEntry {
+    document_id: u32,
+    document_frequency: u32,
+}
+
 impl Index {
     pub fn build_index(input_path: &str, output_path: &str, tokenizer_path: &str) {
         let tokenizer = text_utils::load_tokenizer(tokenizer_path, false);
@@ -35,21 +45,36 @@ impl Index {
         }
     }
 
-    pub fn get_postings(&mut self, term: &str) -> Option<Vec<u32>> {
+    pub fn get_term(&mut self, term: &str) -> Option<PostingList> {
         let offset = self.term_offset_map.get(term)?;
-        Some(self.get_postings_internal(*offset))
+
+        self.postings.seek(*offset);
+        let mut document_id = 0;
+
+        let documents: Vec<PostingEntry> = (0..self.postings.read_vbyte())
+            .map(|_| {
+                let doc_id_delta = self.postings.read_gamma();
+                let document_frequency = self.postings.read_gamma();
+
+                document_id += doc_id_delta;
+
+                PostingEntry {
+                    document_id,
+                    document_frequency,
+                }
+            })
+            .collect();
+
+        let collection_frequency = documents.len() as u32;
+
+        Some(PostingList {
+            documents,
+            collection_frequency,
+        })
     }
 
-    fn get_postings_internal(&mut self, offset: u64) -> Vec<u32> {
-        self.postings.seek(offset);
-        let mut prev = 0;
-
-        (0..self.postings.read_vbyte())
-            .map(|_| {
-                prev += self.postings.read_gamma();
-                prev
-            })
-            .collect()
+    pub fn tokenize_query(&self, query: &str) -> Vec<String> {
+        text_utils::tokenize(&self.tokenizer, query)
     }
 }
 
@@ -74,6 +99,15 @@ mod test {
             assert!(idx.term_offset_map.contains_key(ele));
         }
 
-        assert_eq!(idx.get_postings("hello").unwrap(), [0, 1]);
+        let pl = idx.get_term("hello").unwrap();
+        assert_eq!(
+            pl.documents
+                .iter()
+                .map(|d| d.document_id)
+                .collect::<Vec<u32>>(),
+            [0, 1]
+        );
+
+        assert_eq!(pl.collection_frequency, 2);
     }
 }
