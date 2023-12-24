@@ -20,14 +20,16 @@ pub struct Index {
     tokenizer: Tokenizer,
 }
 
+#[derive(Debug)]
 pub struct PostingList {
-    documents: Vec<PostingEntry>,
-    collection_frequency: u32,
+    pub documents: Vec<PostingEntry>,
+    pub collection_frequency: u32,
 }
 
+#[derive(Debug)]
 pub struct PostingEntry {
-    document_id: u32,
-    document_frequency: u32,
+    pub document_id: u32,
+    pub document_frequency: u32,
 }
 
 impl Index {
@@ -43,6 +45,10 @@ impl Index {
             doc_lenghts: loader::load_document_lenghts(input_path),
             tokenizer: text_utils::load_tokenizer(tokenizer_path, false),
         }
+    }
+
+    pub fn get_num_documents(&self) -> u32 {
+        self.doc_lenghts.len() as u32
     }
 
     pub fn get_term(&mut self, term: &str) -> Option<PostingList> {
