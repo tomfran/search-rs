@@ -25,11 +25,9 @@ impl QueryProcessor {
     }
 
     pub fn query(&mut self, query: &str) -> Vec<u32> {
-        println!("\nQuery: {:?}", query);
-
         let mut scores: HashMap<u32, f32> = HashMap::new();
 
-        for token in self.index.tokenize_query(query) {
+        for token in self.index.tokenize_and_stem_query(query) {
             if let Some(postings) = self.index.get_term(&token) {
                 let idf = (self.num_documents as f32 / postings.collection_frequency as f32).log2();
 
@@ -44,27 +42,10 @@ impl QueryProcessor {
         }
 
         let mut selector = DocumentSelector::new(3);
-        scores.iter().for_each(|(id, score)| {
-            println!("- document: {:?}, score: {:?}", id, score);
-            selector.push(*id, *score)
-        });
+        scores
+            .iter()
+            .for_each(|(id, score)| selector.push(*id, *score));
 
         selector.get_sorted_ids()
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-
-//     #[test]
-//     fn test_build() {
-//         let mut q = QueryProcessor::build_query_processor(
-//             "data/small/index/small",
-//             "data/small/bert-base-uncased",
-//         );
-//         q.query("google");
-//         q.query("apple");
-//         q.query("microsoft");
-//     }
-// }

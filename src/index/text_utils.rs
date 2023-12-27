@@ -1,5 +1,6 @@
 use std::{fs::create_dir_all, path::Path};
 
+use rust_stemmers::{Algorithm, Stemmer};
 use tokenizers::Tokenizer;
 
 pub fn load_tokenizer(filename: &str, force_download: bool) -> Tokenizer {
@@ -19,10 +20,19 @@ pub fn load_tokenizer(filename: &str, force_download: bool) -> Tokenizer {
     Tokenizer::from_file(filename).expect("error while loading tokenizer from file")
 }
 
-pub fn tokenize(tokenizer: &Tokenizer, text: &str) -> Vec<String> {
-    tokenizer
+pub fn load_stemmer() -> Stemmer {
+    Stemmer::create(Algorithm::English)
+}
+
+pub fn tokenize_and_stem(tokenizer: &Tokenizer, stemmer: &Stemmer, text: &str) -> Vec<String> {
+    let tokenized_text = tokenizer
         .encode(text, false)
-        .expect("error while tokenizing text")
+        .expect("error while tokenizing text");
+
+    tokenized_text
         .get_tokens()
-        .to_vec()
+        .iter()
+        .map(|t| t.to_lowercase())
+        .map(|t| stemmer.stem(&t).to_string())
+        .collect()
 }

@@ -10,3 +10,4 @@ path = "src/lib.rs"
 [dependencies]
 rand = "0.8"
 tokenizers = { version = "0.15.0", features = ["http"] }
+rust-stemmers = "1.2.0"

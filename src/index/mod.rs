@@ -2,7 +2,9 @@ mod builder;
 mod loader;
 mod text_utils;
 
+use rust_stemmers::Stemmer;
 use std::collections::BTreeMap;
+use std::fmt::Display;
 use tokenizers::Tokenizer;
 
 use crate::disk::bits_reader::BitsReader;
@@ -18,6 +20,7 @@ pub struct Index {
     term_offset_map: BTreeMap<String, u64>,
     doc_lenghts: Vec<u32>,
     tokenizer: Tokenizer,
+    stemmer: Stemmer,
 }
 
 #[derive(Debug)]
@@ -35,7 +38,8 @@ pub struct PostingEntry {
 impl Index {
     pub fn build_index(input_path: &str, output_path: &str, tokenizer_path: &str) {
         let tokenizer = text_utils::load_tokenizer(tokenizer_path, false);
-        builder::build_index(input_path, output_path, &tokenizer);
+        let stemmer = text_utils::load_stemmer();
+        builder::build_index(input_path, output_path, &tokenizer, &stemmer);
     }
 
     pub fn load_index(input_path: &str, tokenizer_path: &str) -> Index {
@@ -44,6 +48,7 @@ impl Index {
             term_offset_map: loader::load_terms_to_offsets_map(input_path),
             doc_lenghts: loader::load_document_lenghts(input_path),
             tokenizer: text_utils::load_tokenizer(tokenizer_path, false),
+            stemmer: text_utils::load_stemmer(),
         }
     }
 
@@ -79,8 +84,19 @@ impl Index {
         })
     }
 
-    pub fn tokenize_query(&self, query: &str) -> Vec<String> {
-        text_utils::tokenize(&self.tokenizer, query)
+    pub fn tokenize_and_stem_query(&self, query: &str) -> Vec<String> {
+        text_utils::tokenize_and_stem(&self.tokenizer, &self.stemmer, query)
+    }
+}
+
+impl Display for Index {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Index:\n- vocab size: {}\n- num. documents: {})",
+            self.term_offset_map.len(),
+            self.get_num_documents()
+        )
     }
 }
 

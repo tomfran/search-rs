@@ -1,3 +1,4 @@
+use rust_stemmers::Stemmer;
 use std::{collections::BTreeMap, fs};
 use tokenizers::Tokenizer;
 
@@ -17,14 +18,14 @@ struct InMemoryIndex {
     document_lenghts: Vec<u32>,
 }
 
-pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer) {
-    let index = build_in_memory(input_dir, tokenizer);
+pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) {
+    let index = build_in_memory(input_dir, tokenizer, stemmer);
     write_postings(&index, output_path);
     write_vocabulary(&index.term_index_map, output_path);
     write_doc_lentghts(&index.document_lenghts, output_path);
 }
 
-fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer) -> InMemoryIndex {
+fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) -> InMemoryIndex {
     let documents =
         fs::read_dir(input_dir).expect("error while retrieving input directory content");
 
@@ -32,7 +33,7 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer) -> InMemoryIndex {
         .into_iter()
         .map(|p| p.unwrap())
         .map(|p| fs::read_to_string(p.path()).expect("error while reading file"))
-        .map(|s| text_utils::tokenize(tokenizer, &s));
+        .map(|s| text_utils::tokenize_and_stem(tokenizer, stemmer, &s));
 
     let mut term_index_map: BTreeMap<String, usize> = BTreeMap::new();
     let mut postings: Vec<BTreeMap<u32, u32>> = Vec::new();

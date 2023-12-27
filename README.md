@@ -2,19 +2,22 @@
 
 Search engine written in Rust, based on an inverted index on disk.
 
-**Implementation status** 
+### Implementation status 
 - [x] IO classes for writing and reading bit-streams;
 - [ ] Text preprocessing: 
   - [x] Tokenization;
-  - [ ] Stemming.
+  - [x] Stemming.
 - [ ] Index construction:
   - [x] In-memory datasets index construction;
   - [ ] Disk-based partial index construction and merging;
   - [ ] Additional indexes to support things such as spelling correction.
 - [ ] Index queries:
   - [ ] Boolean queries;
-  - [ ] Tf-idf ranked retrieval.
+  - [x] Tf-idf ranked retrieval.
 
-**References**
+### Crates in use
+- [lise-henry/stemmer-rs](https://github.com/lise-henry/stemmer-rs)
+- [huggingface/tokenizers](https://github.com/huggingface/tokenizers)
 
-[*Introduction to Information Retrieval - Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze*](https://nlp.stanford.edu/IR-book/information-retrieval-book.html)
+### References
+[Introduction to Information Retrieval - Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze](https://nlp.stanford.edu/IR-book/information-retrieval-book.html)
