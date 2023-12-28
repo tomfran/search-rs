@@ -24,8 +24,13 @@ impl QueryProcessor {
         }
     }
 
-    pub fn query(&mut self, query: &str) -> Vec<u32> {
+    pub fn query(&mut self, query: &str, num_results: usize) -> Vec<u32> {
         let mut scores: HashMap<u32, f32> = HashMap::new();
+
+        println!(
+            "\t### tokenized query: {:?}",
+            self.index.tokenize_and_stem_query(query)
+        );
 
         for token in self.index.tokenize_and_stem_query(query) {
             if let Some(postings) = self.index.get_term(&token) {
@@ -38,10 +43,12 @@ impl QueryProcessor {
                         .and_modify(|s| *s += doc_score)
                         .or_insert(doc_score);
                 }
+            } else {
+                println!("\t### no postings for term: {}", token);
             }
         }
 
-        let mut selector = DocumentSelector::new(3);
+        let mut selector = DocumentSelector::new(num_results);
         scores
             .iter()
             .for_each(|(id, score)| selector.push(*id, *score));
