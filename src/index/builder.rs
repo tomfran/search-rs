@@ -1,5 +1,6 @@
+use rayon::prelude::*;
 use rust_stemmers::Stemmer;
-use std::{collections::BTreeMap, fs};
+use std::{collections::BTreeMap, fs, sync::Mutex};
 use tokenizers::Tokenizer;
 
 use crate::disk::{bits_writer::BitsWriter, terms_writer::TermsWriter};
@@ -15,61 +16,67 @@ use super::{
 struct InMemoryIndex {
     term_index_map: BTreeMap<String, usize>,
     postings: Vec<BTreeMap<u32, u32>>,
-    document_lenghts: Vec<u32>,
+    document_lengths: Vec<u32>,
 }
 
 pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) {
     let index = build_in_memory(input_dir, tokenizer, stemmer);
     write_postings(&index, output_path);
     write_vocabulary(&index.term_index_map, output_path);
-    write_doc_lentghts(&index.document_lenghts, output_path);
+    write_doc_lentghts(&index.document_lengths, output_path);
 }
 
 fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) -> InMemoryIndex {
-    let documents =
-        fs::read_dir(input_dir).expect("error while retrieving input directory content");
-
-    let tokenized_docs_iter = documents
-        .into_iter()
+    let documents: Vec<fs::DirEntry> = fs::read_dir(input_dir)
+        .expect("error while retrieving input directory content")
         .map(|p| p.unwrap())
-        .map(|p| fs::read_to_string(p.path()).expect("error while reading file"))
-        .map(|s| text_utils::tokenize_and_stem(tokenizer, stemmer, &s));
+        .collect();
 
-    let mut term_index_map: BTreeMap<String, usize> = BTreeMap::new();
-    let mut postings: Vec<BTreeMap<u32, u32>> = Vec::new();
-    let mut document_lenghts: Vec<u32> = Vec::new();
+    let doc_id_mutex = Mutex::new(0);
+    let term_index_map = Mutex::new(BTreeMap::new());
+    let postings = Mutex::new(Vec::new());
+    let document_lengths = Mutex::new(Vec::new());
 
-    for (doc_id, tokens) in tokenized_docs_iter.enumerate() {
-        document_lenghts.push(tokens.len() as u32);
+    documents.into_par_iter().for_each(|d| {
+        let file_content = fs::read_to_string(d.path()).expect("error while reading file");
+        let tokens = text_utils::tokenize_and_stem(tokenizer, stemmer, &file_content);
 
-        if doc_id % 1000 == 0 && doc_id > 0 {
-            println!("Document num: {}", doc_id);
+        let mut doc_id = doc_id_mutex.lock().unwrap();
+
+        if *doc_id % 5000 == 0 && *doc_id > 0 {
+            println!("Document num: {}", *doc_id);
         }
 
+        document_lengths.lock().unwrap().push(tokens.len() as u32);
+
+        let mut l_term_index_map = term_index_map.lock().unwrap();
+        let mut l_postings = postings.lock().unwrap();
+
         for t in tokens.iter() {
-            let value: Option<&usize> = term_index_map.get(t);
+            let value = l_term_index_map.get(t);
 
             let postings_counter = match value {
-                Some(idx) => &mut postings[*idx],
+                Some(idx) => &mut l_postings[*idx],
                 None => {
-                    let idx = term_index_map.len();
-                    term_index_map.insert(t.clone(), idx);
-                    postings.push(BTreeMap::new());
-                    &mut postings[idx]
+                    let idx = l_term_index_map.len();
+                    l_term_index_map.insert(t.clone(), idx);
+                    l_postings.push(BTreeMap::new());
+                    &mut l_postings[idx]
                 }
             };
-            let key = doc_id as u32;
+
             postings_counter
-                .entry(key)
+                .entry(*doc_id)
                 .and_modify(|count| *count += 1)
                 .or_insert(1);
         }
-    }
+        *doc_id += 1;
+    });
 
     InMemoryIndex {
-        term_index_map,
-        postings,
-        document_lenghts,
+        term_index_map: term_index_map.into_inner().unwrap(),
+        postings: postings.into_inner().unwrap(),
+        document_lengths: document_lengths.into_inner().unwrap(),
     }
 }
 

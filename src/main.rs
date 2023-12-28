@@ -1,9 +1,9 @@
 use search::index::Index;
 use search::query::QueryProcessor;
-
 use std::env;
 use std::io::{self, Write};
 use std::process::Command;
+use std::time::Instant; // Import the Instant module
 
 const NUM_RESULTS: usize = 10;
 
@@ -33,6 +33,8 @@ fn clear_terminal() {
 }
 
 fn main() {
+    clear_terminal();
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 3 || args.len() > 4 {
@@ -49,15 +51,16 @@ fn main() {
     let docs_path = format!("{}/docs", base_path);
 
     if build_index {
+        let start_time = Instant::now(); // Record start time
         Index::build_index(&docs_path, &index_path, &tokenizer_path);
+        let elapsed_time = start_time.elapsed(); // Calculate elapsed time
+        println!("Index built in {} seconds.\n", elapsed_time.as_secs_f64());
     }
-
-    clear_terminal();
 
     let mut q = QueryProcessor::build_query_processor(&index_path, &tokenizer_path);
 
     println!(
-        "Search engine for base path: [{}]\nWrite a query and press enter.\n",
+        "Search engine for base path: [{}]\n\nWrite a query and press enter.\n",
         base_path
     );
 
