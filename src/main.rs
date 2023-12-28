@@ -1,8 +1,9 @@
+use search::index::Index;
+use search::query::QueryProcessor;
+
+use std::env;
 use std::io::{self, Write};
 use std::process::Command;
-
-// use search::index::Index;
-use search::query::QueryProcessor;
 
 const NUM_RESULTS: usize = 10;
 
@@ -32,29 +33,39 @@ fn clear_terminal() {
 }
 
 fn main() {
-    let base_path = "data/wiki-data";
-    let index_path = base_path.to_string() + "/index/index";
-    let tokenizer_path = base_path.to_string() + "/tokenizer/bert-base-uncased";
+    let args: Vec<String> = env::args().collect();
 
-    // let docs_path = base_path.to_string() + "/docs";
-    // Index::build_index(&docs_path, &index_path, &tokenizer_path);
+    if args.len() < 3 || args.len() > 4 {
+        println!("Usage: {} <base_path> <load_or_build>", args[0]);
+        return;
+    }
+
+    let base_path = &args[1];
+    let action = &args[2];
+    let build_index = action == "build";
+
+    let index_path = format!("{}/index/index", base_path);
+    let tokenizer_path = format!("{}/tokenizer/bert-base-uncased", base_path);
+    let docs_path = format!("{}/docs", base_path);
+
+    if build_index {
+        Index::build_index(&docs_path, &index_path, &tokenizer_path);
+    }
 
     clear_terminal();
+
+    let mut q = QueryProcessor::build_query_processor(&index_path, &tokenizer_path);
 
     println!(
         "Search engine for base path: [{}]\nWrite a query and press enter.\n",
         base_path
     );
 
-    let mut q = QueryProcessor::build_query_processor(&index_path, &tokenizer_path);
-
     loop {
         let query = read_line("> ");
 
-        // Perform search
         let results = q.query(&query, NUM_RESULTS);
 
-        // Display results
         print_results(&results);
     }
 }

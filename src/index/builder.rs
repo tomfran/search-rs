@@ -42,6 +42,10 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
     for (doc_id, tokens) in tokenized_docs_iter.enumerate() {
         document_lenghts.push(tokens.len() as u32);
 
+        if doc_id % 1000 == 0 && doc_id > 0 {
+            println!("Document num: {}", doc_id);
+        }
+
         for t in tokens.iter() {
             let value: Option<&usize> = term_index_map.get(t);
 
