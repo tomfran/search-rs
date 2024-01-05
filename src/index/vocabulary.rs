@@ -1,12 +1,29 @@
 use std::collections::BTreeMap;
 
-use super::{
-    DOCUMENT_LENGHTS_EXTENSION, OFFSETS_EXTENSION, POSTINGS_EXTENSION, VOCABULARY_ALPHA_EXTENSION,
-    VOCABULARY_LENGHTS_EXTENSION,
+use crate::disk::{
+    bits_reader::BitsReader, bits_writer::BitsWriter, terms_reader::TermsReader,
+    terms_writer::TermsWriter,
 };
-use crate::disk::{bits_reader::BitsReader, terms_reader::TermsReader};
 
-pub fn load_terms_to_offsets_map(input_path: &str) -> BTreeMap<String, u64> {
+use super::{OFFSETS_EXTENSION, VOCABULARY_ALPHA_EXTENSION, VOCABULARY_LENGHTS_EXTENSION};
+
+pub fn write_vocabulary(vocab: &BTreeMap<String, usize>, output_path: &str) {
+    let terms_path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
+    let mut terms_writer = TermsWriter::new(&terms_path);
+
+    let lenghts_path = output_path.to_string() + VOCABULARY_LENGHTS_EXTENSION;
+    let mut lenghts_writer = BitsWriter::new(&lenghts_path);
+
+    for term in vocab.keys() {
+        lenghts_writer.write_gamma(term.len() as u32);
+        terms_writer.write_term(term);
+    }
+
+    lenghts_writer.flush();
+    terms_writer.flush();
+}
+
+pub fn load_vocabulary(input_path: &str) -> BTreeMap<String, u64> {
     let terms_path: String = input_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
     let terms_buffer = TermsReader::new(&terms_path).read_to_string();
 
@@ -38,14 +55,4 @@ pub fn load_terms_to_offsets_map(input_path: &str) -> BTreeMap<String, u64> {
     }
 
     res
-}
-
-pub fn load_document_lenghts(input_path: &str) -> Vec<u32> {
-    let mut reader = BitsReader::new(&(input_path.to_string() + DOCUMENT_LENGHTS_EXTENSION));
-    let n = reader.read_vbyte();
-    (0..n).map(|_| reader.read_gamma()).collect()
-}
-
-pub fn build_postings_reader(input_path: &str) -> BitsReader {
-    BitsReader::new(&(input_path.to_string() + POSTINGS_EXTENSION))
 }

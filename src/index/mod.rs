@@ -1,6 +1,8 @@
 mod builder;
-mod loader;
-mod text_utils;
+mod documents;
+mod postings;
+mod text;
+mod vocabulary;
 
 use rust_stemmers::Stemmer;
 use std::collections::BTreeMap;
@@ -8,6 +10,8 @@ use std::fmt::Display;
 use tokenizers::Tokenizer;
 
 use crate::disk::bits_reader::BitsReader;
+
+use self::postings::PostingList;
 
 pub const POSTINGS_EXTENSION: &str = ".postings";
 pub const OFFSETS_EXTENSION: &str = ".offsets";
@@ -23,32 +27,26 @@ pub struct Index {
     stemmer: Stemmer,
 }
 
-#[derive(Debug)]
-pub struct PostingList {
-    pub documents: Vec<PostingEntry>,
-    pub collection_frequency: u32,
-}
-
-#[derive(Debug)]
-pub struct PostingEntry {
-    pub document_id: u32,
-    pub document_frequency: u32,
+pub struct InMemoryIndex {
+    term_index_map: BTreeMap<String, usize>,
+    postings: Vec<PostingList>,
+    document_lengths: Vec<u32>,
 }
 
 impl Index {
     pub fn build_index(input_path: &str, output_path: &str, tokenizer_path: &str) {
-        let tokenizer = text_utils::load_tokenizer(tokenizer_path, false);
-        let stemmer = text_utils::load_stemmer();
+        let tokenizer = text::load_tokenizer(tokenizer_path, false);
+        let stemmer = text::load_stemmer();
         builder::build_index(input_path, output_path, &tokenizer, &stemmer);
     }
 
     pub fn load_index(input_path: &str, tokenizer_path: &str) -> Index {
         Index {
-            postings: loader::build_postings_reader(input_path),
-            term_offset_map: loader::load_terms_to_offsets_map(input_path),
-            doc_lenghts: loader::load_document_lenghts(input_path),
-            tokenizer: text_utils::load_tokenizer(tokenizer_path, false),
-            stemmer: text_utils::load_stemmer(),
+            postings: postings::build_postings_reader(input_path),
+            term_offset_map: vocabulary::load_vocabulary(input_path),
+            doc_lenghts: documents::load_document_lenghts(input_path),
+            tokenizer: text::load_tokenizer(tokenizer_path, false),
+            stemmer: text::load_stemmer(),
         }
     }
 
@@ -56,36 +54,13 @@ impl Index {
         self.doc_lenghts.len() as u32
     }
 
-    pub fn get_term(&mut self, term: &str) -> Option<PostingList> {
+    pub fn get_term(&mut self, term: &str) -> Option<postings::PostingList> {
         let offset = self.term_offset_map.get(term)?;
-
-        self.postings.seek(*offset);
-        let mut document_id = 0;
-
-        let documents: Vec<PostingEntry> = (0..self.postings.read_vbyte())
-            .map(|_| {
-                let doc_id_delta = self.postings.read_gamma();
-                let document_frequency = self.postings.read_gamma();
-
-                document_id += doc_id_delta;
-
-                PostingEntry {
-                    document_id,
-                    document_frequency,
-                }
-            })
-            .collect();
-
-        let collection_frequency = documents.len() as u32;
-
-        Some(PostingList {
-            documents,
-            collection_frequency,
-        })
+        Some(postings::load_postings_list(&mut self.postings, *offset))
     }
 
     pub fn tokenize_and_stem_query(&self, query: &str) -> Vec<String> {
-        text_utils::tokenize_and_stem(&self.tokenizer, &self.stemmer, query)
+        text::tokenize_and_stem(&self.tokenizer, &self.stemmer, query)
     }
 }
 
@@ -131,5 +106,8 @@ mod test {
         );
 
         assert_eq!(pl.collection_frequency, 2);
+
+        let pl = idx.get_term("world").unwrap();
+        assert_eq!(pl.documents[0].positions, [1]);
     }
 }

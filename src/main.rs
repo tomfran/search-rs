@@ -1,9 +1,12 @@
-use search::index::Index;
-use search::query::QueryProcessor;
 use std::env;
 use std::io::{self, Write};
 use std::process::Command;
-use std::time::Instant; // Import the Instant module
+use std::time::{Duration, Instant};
+
+use search::index::Index;
+use search::query::QueryProcessor;
+
+use indicatif::HumanDuration;
 
 const NUM_RESULTS: usize = 10;
 
@@ -35,10 +38,14 @@ fn clear_terminal() {
 fn main() {
     clear_terminal();
 
+    println!("\x1B[1mSearch-rs\x1B[0m\n");
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 3 || args.len() > 4 {
-        println!("Usage: {} <base_path> <load_or_build>", args[0]);
+    if args.len() < 3 || args.len() > 5 {
+        println!(
+            "Usage: {} <base_path> <load_or_build> [build_num_threads]",
+            args[0]
+        );
         return;
     }
 
@@ -51,16 +58,33 @@ fn main() {
     let docs_path = format!("{}/docs", base_path);
 
     if build_index {
-        let start_time = Instant::now(); // Record start time
+        println!("Start build on directory [{}]\n", docs_path);
+
+        let num_threads = args.get(3).map_or(0, |s| s.parse().unwrap_or(0));
+
+        if num_threads != 0 {
+            println!("Setting thread number to {}", num_threads);
+
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(num_threads)
+                .build_global()
+                .unwrap();
+        }
+
+        let start_time = Instant::now();
+
         Index::build_index(&docs_path, &index_path, &tokenizer_path);
-        let elapsed_time = start_time.elapsed(); // Calculate elapsed time
-        println!("Index built in {} seconds.\n", elapsed_time.as_secs_f64());
+        let elapsed_time = start_time.elapsed();
+        println!(
+            "Index built in {}.\n",
+            HumanDuration(Duration::from_secs(elapsed_time.as_secs()))
+        );
     }
 
     let mut q = QueryProcessor::build_query_processor(&index_path, &tokenizer_path);
 
     println!(
-        "Search engine for base path: [{}]\n\nWrite a query and press enter.\n",
+        "Loaded search engine for directory: [{}]\n\nWrite a query and press enter.\n",
         base_path
     );
 

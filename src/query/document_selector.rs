@@ -1,33 +1,33 @@
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 #[derive(Debug)]
-struct DocumentScore {
+struct Entry {
     id: u32,
     score: f32,
 }
 
-impl PartialEq for DocumentScore {
+impl PartialEq for Entry {
     fn eq(&self, other: &Self) -> bool {
         self.score == other.score
     }
 }
 
-impl Eq for DocumentScore {}
+impl Eq for Entry {}
 
-impl PartialOrd for DocumentScore {
+impl PartialOrd for Entry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         other.score.partial_cmp(&self.score)
     }
 }
 
-impl Ord for DocumentScore {
+impl Ord for Entry {
     fn cmp(&self, other: &Self) -> Ordering {
         other.partial_cmp(self).unwrap()
     }
 }
 
 pub struct DocumentSelector {
-    heap: BinaryHeap<DocumentScore>,
+    heap: BinaryHeap<Entry>,
     capacity: usize,
 }
 
@@ -40,7 +40,7 @@ impl DocumentSelector {
     }
 
     pub fn push(&mut self, id: u32, score: f32) {
-        self.heap.push(DocumentScore { id, score });
+        self.heap.push(Entry { id, score });
 
         if self.heap.len() > self.capacity {
             self.heap.pop();
@@ -51,7 +51,7 @@ impl DocumentSelector {
         let mut res: Vec<u32> = (0..self.capacity)
             .map(|_| self.heap.pop())
             .filter(|e| e.is_some())
-            .map(|e: Option<DocumentScore>| e.unwrap().id)
+            .map(|e: Option<Entry>| e.unwrap().id)
             .collect();
 
         res.reverse();

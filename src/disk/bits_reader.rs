@@ -62,6 +62,21 @@ impl BitsReader {
         res as u32 - 1
     }
 
+    pub fn read_vbyte_gamma_gap_vector(&mut self) -> Vec<u32> {
+        let mut prefix = 0;
+        (0..self.read_vbyte())
+            .map(|_| {
+                let gap = self.read_gamma();
+                prefix += gap;
+                prefix
+            })
+            .collect()
+    }
+
+    pub fn read_vbyte_gamma_vector(&mut self) -> Vec<u32> {
+        (0..self.read_vbyte()).map(|_| self.read_gamma()).collect()
+    }
+
     fn read_internal(&mut self, len: u32) -> u128 {
         let mask = (1 << len) - 1;
 
@@ -125,12 +140,22 @@ mod test {
             w.write_gamma(i);
         });
 
+        for _ in 0..2 {
+            w.write_vbyte(3);
+            (1..4).for_each(|i| {
+                w.write_gamma(i);
+            });
+        }
+
         w.flush();
 
         let mut r = BitsReader::new("data/test/writer_unit.bin");
 
         (1..100).for_each(|i| assert_eq!(i, r.read_vbyte()));
         (1..100).for_each(|i| assert_eq!(i, r.read_gamma()));
+
+        assert_eq!(r.read_vbyte_gamma_vector(), [1, 2, 3]);
+        assert_eq!(r.read_vbyte_gamma_gap_vector(), [1, 3, 6]);
     }
 
     #[test]

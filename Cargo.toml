@@ -12,3 +12,4 @@ rand = "0.8"
 tokenizers = { version = "0.15.0", features = ["http"] }
 rust-stemmers = "1.2.0"
 rayon = "1.8.0"
+indicatif = {version = "0.17.0", features = ["rayon", "improved_unicode"]}
