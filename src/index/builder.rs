@@ -21,6 +21,8 @@ const PROGRESS_STYLE: &str =
     " Documents per second: {per_sec:<3}\n\n [{elapsed_precise}] [{bar:50}] {pos}/{len} ({eta})";
 const PROGRESS_CHARS: &str = "=> ";
 
+const CUTOFF_THRESHOLD: f64 = 0.8;
+
 pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) {
     let index: InMemoryIndex = build_in_memory(input_dir, tokenizer, stemmer);
     write_postings(&index, output_path);
@@ -89,12 +91,20 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
             *doc_id += 1;
         });
 
-    let sorted_term_index_map: BTreeMap<String, usize> =
-        term_index_map.into_inner().unwrap().into_iter().collect();
+    let final_postings = postings.into_inner().unwrap();
+
+    let frequency_threshold = (final_postings.len() as f64 * CUTOFF_THRESHOLD) as u32;
+
+    let sorted_term_index_map: BTreeMap<String, usize> = term_index_map
+        .into_inner()
+        .unwrap()
+        .into_iter()
+        .filter(|(_, v)| final_postings[*v].collection_frequency <= frequency_threshold)
+        .collect();
 
     InMemoryIndex {
         term_index_map: sorted_term_index_map,
-        postings: postings.into_inner().unwrap(),
+        postings: final_postings,
         document_lengths: document_lengths.into_inner().unwrap(),
     }
 }
