@@ -8,14 +8,20 @@ use search::query::QueryProcessor;
 
 use indicatif::HumanDuration;
 
-const NUM_RESULTS: usize = 10;
+const NUM_RESULTS: usize = 1000000;
 
-fn print_results(results: &[u32]) {
-    println!("\nSearch Results:");
-    for (i, doc_id) in results.iter().enumerate() {
-        println!("\t- {:3}. Doc ID: {}", i + 1, doc_id);
-    }
-    println!();
+fn print_results(results: &[u32], elapsed_time: Duration) {
+    // println!("\nSearch Results:");
+
+    // for (i, doc_id) in results.iter().enumerate() {
+    //     println!("\t- {:3}. Doc ID: {}", i + 1, doc_id);
+    // }
+
+    println!(
+        "\nFetched {} documents in {} ms",
+        results.len(),
+        elapsed_time.as_millis()
+    );
 }
 
 fn read_line(prompt: &str) -> String {
@@ -91,8 +97,9 @@ fn main() {
     loop {
         let query = read_line("> ");
 
+        let start_time = Instant::now();
         let results = q.query(&query, NUM_RESULTS);
-
-        print_results(&results);
+        let elapsed_time = start_time.elapsed();
+        print_results(&results, elapsed_time);
     }
 }

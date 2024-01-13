@@ -4,6 +4,7 @@ mod postings;
 mod text;
 mod vocabulary;
 
+use fxhash::FxHashMap;
 use rust_stemmers::Stemmer;
 use std::collections::BTreeMap;
 use std::fmt::Display;
@@ -21,7 +22,7 @@ pub const VOCABULARY_LENGHTS_EXTENSION: &str = ".term_lengths";
 
 pub struct Index {
     postings: BitsReader,
-    term_offset_map: BTreeMap<String, u64>,
+    term_offset_map: FxHashMap<String, u64>,
     doc_lenghts: Vec<u32>,
     tokenizer: Tokenizer,
     stemmer: Stemmer,

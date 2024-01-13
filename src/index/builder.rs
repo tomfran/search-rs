@@ -35,7 +35,7 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
         .collect();
 
     let doc_id_mutex = Mutex::new(0);
-    let term_index_map = Mutex::new(BTreeMap::new());
+    let term_index_map = Mutex::new(HashMap::new());
 
     let postings: Mutex<Vec<PostingList>> = Mutex::new(Vec::new());
     let term_doc_map: Mutex<Vec<HashMap<u32, usize>>> = Mutex::new(Vec::new());
@@ -89,8 +89,11 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
             *doc_id += 1;
         });
 
+    let sorted_term_index_map: BTreeMap<String, usize> =
+        term_index_map.into_inner().unwrap().into_iter().collect();
+
     InMemoryIndex {
-        term_index_map: term_index_map.into_inner().unwrap(),
+        term_index_map: sorted_term_index_map,
         postings: postings.into_inner().unwrap(),
         document_lengths: document_lengths.into_inner().unwrap(),
     }

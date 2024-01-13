@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use fxhash::FxHashMap;
+
 use crate::disk::{
     bits_reader::BitsReader, bits_writer::BitsWriter, terms_reader::TermsReader,
     terms_writer::TermsWriter,
@@ -23,7 +25,7 @@ pub fn write_vocabulary(vocab: &BTreeMap<String, usize>, output_path: &str) {
     terms_writer.flush();
 }
 
-pub fn load_vocabulary(input_path: &str) -> BTreeMap<String, u64> {
+pub fn load_vocabulary(input_path: &str) -> FxHashMap<String, u64> {
     let terms_path: String = input_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
     let terms_buffer = TermsReader::new(&terms_path).read_to_string();
 
@@ -38,7 +40,7 @@ pub fn load_vocabulary(input_path: &str) -> BTreeMap<String, u64> {
     let mut start_term_offset: usize = 0;
     let mut postings_offset = 0;
 
-    let mut res: BTreeMap<String, u64> = BTreeMap::new();
+    let mut res = FxHashMap::default();
 
     for _ in 0..num_terms {
         let term_length = lenghts_reader.read_gamma() as usize;

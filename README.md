@@ -2,25 +2,43 @@
 
 Search engine written in Rust, based on an inverted index on disk.
 
-### Implementation status 
-- [x] IO classes for writing and reading bit-streams;
-- [x] Text preprocessing: 
-  - [x] Tokenization;
-  - [x] Stemming.
-- [ ] Index construction:
-  - [x] In-memory datasets index construction;
-  - [ ] Disk-based partial index construction and merging;
-  - [ ] Additional indexes to support things such as spelling correction.
-- [ ] Index queries:
-  - [ ] Boolean queries;
-  - [x] Tf-idf ranked retrieval;
-  - [x] Window computation.
+## Implementation status 
 
-### Crates in use
+**IO**
+- [x] Classes for writing and reading bit-streams;
+- [ ] Proper strings writer and reader.
+
+**Text preprocessing** 
+- [x] Tokenization;
+- [x] Stemming;
+- [ ] Parametrization at build time.
+
+**Index construction**
+- [x] In-memory datasets index construction;
+- [ ] Proper vocabulary and paths on disk;
+- [ ] Spelling correction index;
+- [ ] Disk-based partial index construction and merging;
+
+**Queries**
+- [x] Tf-idf ranked retrieval;
+- [x] Window computation.
+- [ ] Boolean queries;
+- [ ] Parallel scoring.
+
+**Evaluation**
+- [ ] Query speed;
+- [ ] Query quality; 
+- [ ] Disk overhead.
+
+## Crates in use
 - [stemmer-rs](https://github.com/lise-henry/stemmer-rs)
 - [tokenizers](https://github.com/huggingface/tokenizers)
 - [indicatif](https://github.com/console-rs/indicatif)
+- [fxhash](https://github.com/cbreeden/fxhash)
 
+## References
+[Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/information-retrieval-book.html) - Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze
 
-### References
-[Introduction to Information Retrieval - Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze](https://nlp.stanford.edu/IR-book/information-retrieval-book.html)
+---
+
+*Feel free to get in touch to discuss the project!*
