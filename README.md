@@ -6,7 +6,7 @@ Search engine written in Rust, based on an inverted index on disk.
 
 **IO**
 - [x] Classes for writing and reading bit-streams;
-- [ ] Proper strings writer and reader.
+- [x] Proper strings writer and reader.
 
 **Text preprocessing** 
 - [x] Tokenization;

@@ -18,7 +18,6 @@ pub const POSTINGS_EXTENSION: &str = ".postings";
 pub const OFFSETS_EXTENSION: &str = ".offsets";
 pub const DOCUMENT_LENGHTS_EXTENSION: &str = ".doc_lengths";
 pub const VOCABULARY_ALPHA_EXTENSION: &str = ".alphas";
-pub const VOCABULARY_LENGHTS_EXTENSION: &str = ".term_lengths";
 
 pub struct Index {
     postings: BitsReader,
