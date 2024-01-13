@@ -54,6 +54,14 @@ impl BitsWriter {
         (vbyte, 8 * byte_num)
     }
 
+    pub fn write_str(&mut self, s: &str) -> u64 {
+        self.write_gamma(s.len() as u32)
+            + s.as_bytes()
+                .iter()
+                .map(|b| self.write_internal(*b as u128, 8))
+                .sum::<u64>()
+    }
+
     fn write_internal(&mut self, payload: u128, len: u32) -> u64 {
         let free = 128 - self.written;
         self.buffer |= payload << self.written;

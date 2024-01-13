@@ -77,6 +77,15 @@ impl BitsReader {
         (0..self.read_vbyte()).map(|_| self.read_gamma()).collect()
     }
 
+    pub fn read_str(&mut self) -> String {
+        String::from_utf8(
+            (0..self.read_gamma())
+                .map(|_| self.read_internal(8) as u8)
+                .collect(),
+        )
+        .unwrap()
+    }
+
     fn read_internal(&mut self, len: u32) -> u128 {
         let mask = (1 << len) - 1;
 
@@ -147,6 +156,8 @@ mod test {
             });
         }
 
+        w.write_str("hello");
+
         w.flush();
 
         let mut r = BitsReader::new("data/test/writer_unit.bin");
@@ -156,6 +167,8 @@ mod test {
 
         assert_eq!(r.read_vbyte_gamma_vector(), [1, 2, 3]);
         assert_eq!(r.read_vbyte_gamma_gap_vector(), [1, 3, 6]);
+
+        assert_eq!(r.read_str(), "hello");
     }
 
     #[test]
