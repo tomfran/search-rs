@@ -103,7 +103,7 @@ impl BitsWriter {
 #[cfg(test)]
 mod test {
 
-    use super::*;
+    use crate::{disk::bits_writer::BitsWriter, test_utils::utils::create_temporary_file_path};
 
     #[test]
     fn test_gamma_coding() {
@@ -132,13 +132,12 @@ mod test {
         let word = (1 << 10) - 1;
         let len = 10;
 
-        let mut w = BitsWriter::new("data/test/writer.bin");
+        let mut w = BitsWriter::new(&create_temporary_file_path("overflow"));
         w.written = 125;
 
         w.write_internal(word, len);
 
         let b = w.buffer;
-        println!("{:b}", b);
         assert_eq!(b, (1 << 7) - 1)
     }
 }

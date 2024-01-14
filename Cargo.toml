@@ -14,3 +14,4 @@ rust-stemmers = "1.2.0"
 rayon = "1.8.0"
 indicatif = {version = "0.17.0", features = ["rayon", "improved_unicode"]}
 fxhash = "0.2.1"
+tempdir = "0.3.7"

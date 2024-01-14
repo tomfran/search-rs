@@ -77,20 +77,21 @@ impl Display for Index {
 
 #[cfg(test)]
 mod test {
+    use crate::test_utils::utils::create_temporary_dir_path;
+
     use super::*;
 
     #[test]
     fn test_build() {
+        let index_path = &create_temporary_dir_path();
+
         Index::build_index(
             "data/index_unit_test/docs",
-            "data/index_unit_test/index/test",
+            index_path,
             "data/index_unit_test/test_tokenizer",
         );
 
-        let mut idx = Index::load_index(
-            "data/index_unit_test/index/test",
-            "data/index_unit_test/test_tokenizer",
-        );
+        let mut idx = Index::load_index(index_path, "data/index_unit_test/test_tokenizer");
 
         for ele in ["hello", "man", "world"] {
             assert!(idx.term_offset_map.contains_key(ele));

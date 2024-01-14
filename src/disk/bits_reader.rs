@@ -132,14 +132,15 @@ impl BitsReader {
 }
 
 #[cfg(test)]
-mod test {
-
+mod tests {
     use super::*;
-    use crate::disk::bits_writer::BitsWriter;
+    use crate::{disk::bits_writer::BitsWriter, test_utils::utils::create_temporary_file_path};
 
     #[test]
     fn test_read() {
-        let mut w = BitsWriter::new("data/test/writer_unit.bin");
+        let test_output_path = create_temporary_file_path("test_read");
+
+        let mut w = BitsWriter::new(&test_output_path);
 
         (1..100).for_each(|i| {
             w.write_vbyte(i);
@@ -160,7 +161,7 @@ mod test {
 
         w.flush();
 
-        let mut r = BitsReader::new("data/test/writer_unit.bin");
+        let mut r = BitsReader::new(&test_output_path);
 
         (1..100).for_each(|i| assert_eq!(i, r.read_vbyte()));
         (1..100).for_each(|i| assert_eq!(i, r.read_gamma()));
@@ -173,14 +174,16 @@ mod test {
 
     #[test]
     fn test_seek() {
-        let mut w = BitsWriter::new("data/test/writer_seek.bin");
+        let test_output_path = create_temporary_file_path("test_seek");
+
+        let mut w = BitsWriter::new(&test_output_path);
 
         let offset = (0..1000).map(|i| w.write_gamma(i)).sum();
         w.write_gamma(10);
 
         w.flush();
 
-        let mut r = BitsReader::new("data/test/writer_seek.bin");
+        let mut r = BitsReader::new(&test_output_path);
 
         r.seek(offset);
         assert_eq!(r.read_gamma(), 10);
