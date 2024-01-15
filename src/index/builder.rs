@@ -26,7 +26,7 @@ const CUTOFF_THRESHOLD: f64 = 0.8;
 pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) {
     let index: InMemoryIndex = build_in_memory(input_dir, tokenizer, stemmer);
     write_postings(&index, output_path);
-    write_vocabulary(&index.term_index_map, output_path);
+    write_vocabulary(&index, output_path);
     write_doc_lentghts(&index.document_lengths, output_path);
 }
 

@@ -158,6 +158,7 @@ mod tests {
         }
 
         w.write_str("hello");
+        w.write_str("");
 
         w.flush();
 
@@ -170,6 +171,7 @@ mod tests {
         assert_eq!(r.read_vbyte_gamma_gap_vector(), [1, 3, 6]);
 
         assert_eq!(r.read_str(), "hello");
+        assert_eq!(r.read_str(), "");
     }
 
     #[test]
