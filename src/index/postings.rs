@@ -27,7 +27,6 @@ pub fn write_postings(index: &InMemoryIndex, output_path: &str) {
 
     offsets_writer.write_vbyte(index.term_index_map.len() as u32);
 
-    // write terms in alphabetic order
     for (_, idx) in index.term_index_map.iter() {
         offsets_writer.write_gamma(offset as u32 - prev_offset);
         prev_offset = offset as u32;
@@ -54,6 +53,10 @@ pub fn write_postings(index: &InMemoryIndex, output_path: &str) {
 
     postings_writer.flush();
     offsets_writer.flush();
+}
+
+pub fn build_postings_reader(input_path: &str) -> BitsReader {
+    BitsReader::new(&(input_path.to_string() + POSTINGS_EXTENSION))
 }
 
 pub fn load_postings_list(postings_reader: &mut BitsReader, offset: u64) -> PostingList {
@@ -85,6 +88,15 @@ pub fn load_postings_list(postings_reader: &mut BitsReader, offset: u64) -> Post
     }
 }
 
-pub fn build_postings_reader(input_path: &str) -> BitsReader {
-    BitsReader::new(&(input_path.to_string() + POSTINGS_EXTENSION))
+pub fn load_offsets(input_path: &str) -> Vec<u64> {
+    let offsets_path = input_path.to_string() + OFFSETS_EXTENSION;
+    let mut offsets_reader = BitsReader::new(&offsets_path);
+
+    let mut offset = 0;
+    (0..offsets_reader.read_vbyte())
+        .map(|_| {
+            offset += offsets_reader.read_gamma() as u64;
+            offset
+        })
+        .collect()
 }

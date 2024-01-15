@@ -20,8 +20,9 @@ pub const DOCUMENT_LENGHTS_EXTENSION: &str = ".doc_lengths";
 pub const VOCABULARY_ALPHA_EXTENSION: &str = ".alphas";
 
 pub struct Index {
+    term_to_index: FxHashMap<String, usize>,
     postings: BitsReader,
-    term_offset_map: FxHashMap<String, u64>,
+    term_offsets: Vec<u64>,
     doc_lenghts: Vec<u32>,
     tokenizer: Tokenizer,
     stemmer: Stemmer,
@@ -42,8 +43,9 @@ impl Index {
 
     pub fn load_index(input_path: &str, tokenizer_path: &str) -> Index {
         Index {
+            term_to_index: vocabulary::load_vocabulary(input_path),
             postings: postings::build_postings_reader(input_path),
-            term_offset_map: vocabulary::load_vocabulary(input_path),
+            term_offsets: postings::load_offsets(input_path),
             doc_lenghts: documents::load_document_lenghts(input_path),
             tokenizer: text::load_tokenizer(tokenizer_path, false),
             stemmer: text::load_stemmer(),
@@ -55,8 +57,10 @@ impl Index {
     }
 
     pub fn get_term(&mut self, term: &str) -> Option<postings::PostingList> {
-        let offset = self.term_offset_map.get(term)?;
-        Some(postings::load_postings_list(&mut self.postings, *offset))
+        self.term_to_index
+            .get(term)
+            .map(|i| self.term_offsets[*i])
+            .map(|o| postings::load_postings_list(&mut self.postings, o))
     }
 
     pub fn tokenize_and_stem_query(&self, query: &str) -> Vec<String> {
@@ -69,7 +73,7 @@ impl Display for Index {
         write!(
             f,
             "Index:\n- vocab size: {}\n- num. documents: {})",
-            self.term_offset_map.len(),
+            self.term_to_index.len(),
             self.get_num_documents()
         )
     }
@@ -94,7 +98,7 @@ mod test {
         let mut idx = Index::load_index(index_path, "data/index_unit_test/test_tokenizer");
 
         for ele in ["hello", "man", "world"] {
-            assert!(idx.term_offset_map.contains_key(ele));
+            assert!(idx.term_to_index.contains_key(ele));
         }
 
         let pl = idx.get_term("hello").unwrap();
