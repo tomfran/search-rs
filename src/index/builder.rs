@@ -10,7 +10,7 @@ use rust_stemmers::Stemmer;
 use tokenizers::Tokenizer;
 
 use super::{
-    documents::write_doc_lentghts,
+    documents::{write_documents, Document},
     postings::{write_postings, PostingEntry, PostingList},
     text,
     vocabulary::write_vocabulary,
@@ -27,24 +27,27 @@ pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, st
     let index: InMemoryIndex = build_in_memory(input_dir, tokenizer, stemmer);
     write_postings(&index, output_path);
     write_vocabulary(&index, output_path);
-    write_doc_lentghts(&index.document_lengths, output_path);
+    write_documents(&index.documents, output_path);
 }
 
 fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) -> InMemoryIndex {
-    let documents: Vec<fs::DirEntry> = fs::read_dir(input_dir)
+    let files: Vec<fs::DirEntry> = fs::read_dir(input_dir)
         .expect("error while retrieving input directory content")
         .map(|p| p.unwrap())
         .collect();
 
+    // document counter
     let doc_id_mutex = Mutex::new(0);
-    let term_index_map = Mutex::new(HashMap::new());
-
+    // postings list
     let postings: Mutex<Vec<PostingList>> = Mutex::new(Vec::new());
+    // word to postings index
+    let term_index_map = Mutex::new(HashMap::new());
+    // per-word doc id to posting list index
     let term_doc_map: Mutex<Vec<HashMap<u32, usize>>> = Mutex::new(Vec::new());
+    // documents data
+    let documents = Mutex::new(Vec::new());
 
-    let document_lengths = Mutex::new(Vec::new());
-
-    documents
+    files
         .into_par_iter()
         .progress_with_style(
             ProgressStyle::with_template(PROGRESS_STYLE)
@@ -57,13 +60,18 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
 
             let mut doc_id = doc_id_mutex.lock().unwrap();
 
-            document_lengths.lock().unwrap().push(tokens.len() as u32);
+            // update documents array
+            documents.lock().unwrap().push(Document {
+                path: d.path().to_str().unwrap().to_string(),
+                lenght: tokens.len() as u32,
+            });
 
             let mut l_term_index_map = term_index_map.lock().unwrap();
             let mut l_postings = postings.lock().unwrap();
             let mut l_term_doc_map = term_doc_map.lock().unwrap();
 
             for (word_pos, t) in tokens.iter().enumerate() {
+                // obtain postings for this word and increment collection frequency
                 if !l_term_index_map.contains_key(t) {
                     let idx = l_term_index_map.len();
                     l_term_index_map.insert(t.clone(), idx);
@@ -75,6 +83,7 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
                 let postings_list = &mut l_postings[term_index];
                 postings_list.collection_frequency += 1;
 
+                // obtain document entry for this word and update it
                 if !l_term_doc_map[term_index].contains_key(&doc_id) {
                     let idx = postings_list.documents.len();
                     l_term_doc_map[term_index].insert(*doc_id, idx);
@@ -105,6 +114,6 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
     InMemoryIndex {
         term_index_map: sorted_term_index_map,
         postings: final_postings,
-        document_lengths: document_lengths.into_inner().unwrap(),
+        documents: documents.into_inner().unwrap(),
     }
 }

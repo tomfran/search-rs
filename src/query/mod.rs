@@ -32,7 +32,7 @@ impl QueryProcessor {
         }
     }
 
-    pub fn query(&mut self, query: &str, num_results: usize) -> Vec<u32> {
+    pub fn query(&mut self, query: &str, num_results: usize) -> Vec<String> {
         let mut scores: HashMap<u32, DocumentScore> = HashMap::new();
 
         let tokens = self.index.tokenize_and_stem_query(query);
@@ -41,6 +41,8 @@ impl QueryProcessor {
             if let Some(postings) = self.index.get_term(token) {
                 let idf = (self.num_documents as f32 / postings.collection_frequency as f32).log2();
 
+                // for each term-doc pair, increment the documetn tf-idf score
+                // and record token positions for window computation
                 for doc_posting in &postings.documents {
                     let td_idf_score = doc_posting.document_frequency as f32 * idf;
 
@@ -64,13 +66,21 @@ impl QueryProcessor {
 
         let mut selector = DocumentSelector::new(num_results);
         let num_tokens = tokens.len();
-        scores.iter().for_each(|(id, score)| {
+        scores.iter_mut().for_each(|(id, score)| {
+            // tf-idf score must be divided by the document len
+            score.tf_idf /= self.index.get_document_len(*id) as f32;
+
             selector.push(*id, QueryProcessor::compute_score(score, num_tokens));
         });
 
-        selector.get_sorted_ids()
+        selector
+            .get_sorted_ids()
+            .iter()
+            .map(|i| self.index.get_document_path(*i))
+            .collect()
     }
 
+    // score takes into consideration the window size and td-idf scoring
     fn compute_score(document_score: &DocumentScore, num_tokens: usize) -> f32 {
         let mut window = u32::MAX;
 

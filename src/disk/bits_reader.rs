@@ -73,10 +73,6 @@ impl BitsReader {
             .collect()
     }
 
-    pub fn read_vbyte_gamma_vector(&mut self) -> Vec<u32> {
-        (0..self.read_vbyte()).map(|_| self.read_gamma()).collect()
-    }
-
     pub fn read_str(&mut self) -> String {
         String::from_utf8(
             (0..self.read_gamma())
@@ -150,12 +146,10 @@ mod tests {
             w.write_gamma(i);
         });
 
-        for _ in 0..2 {
-            w.write_vbyte(3);
-            (1..4).for_each(|i| {
-                w.write_gamma(i);
-            });
-        }
+        w.write_vbyte(3);
+        (1..4).for_each(|i| {
+            w.write_gamma(i);
+        });
 
         w.write_str("hello");
         w.write_str("");
@@ -167,7 +161,6 @@ mod tests {
         (1..100).for_each(|i| assert_eq!(i, r.read_vbyte()));
         (1..100).for_each(|i| assert_eq!(i, r.read_gamma()));
 
-        assert_eq!(r.read_vbyte_gamma_vector(), [1, 2, 3]);
         assert_eq!(r.read_vbyte_gamma_gap_vector(), [1, 3, 6]);
 
         assert_eq!(r.read_str(), "hello");

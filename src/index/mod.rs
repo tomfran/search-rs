@@ -12,18 +12,19 @@ use tokenizers::Tokenizer;
 
 use crate::disk::bits_reader::BitsReader;
 
+use self::documents::Document;
 use self::postings::PostingList;
 
 pub const POSTINGS_EXTENSION: &str = ".postings";
 pub const OFFSETS_EXTENSION: &str = ".offsets";
-pub const DOCUMENT_LENGHTS_EXTENSION: &str = ".doc_lengths";
+pub const DOCUMENTS_EXTENSION: &str = ".docs";
 pub const VOCABULARY_ALPHA_EXTENSION: &str = ".alphas";
 
 pub struct Index {
     term_to_index: FxHashMap<String, usize>,
     postings: BitsReader,
     term_offsets: Vec<u64>,
-    doc_lenghts: Vec<u32>,
+    documents: Vec<Document>,
     tokenizer: Tokenizer,
     stemmer: Stemmer,
 }
@@ -31,7 +32,7 @@ pub struct Index {
 pub struct InMemoryIndex {
     term_index_map: BTreeMap<String, usize>,
     postings: Vec<PostingList>,
-    document_lengths: Vec<u32>,
+    documents: Vec<Document>,
 }
 
 impl Index {
@@ -46,14 +47,22 @@ impl Index {
             term_to_index: vocabulary::load_vocabulary(input_path),
             postings: postings::build_postings_reader(input_path),
             term_offsets: postings::load_offsets(input_path),
-            doc_lenghts: documents::load_document_lenghts(input_path),
+            documents: documents::load_documents(input_path),
             tokenizer: text::load_tokenizer(tokenizer_path, false),
             stemmer: text::load_stemmer(),
         }
     }
 
     pub fn get_num_documents(&self) -> u32 {
-        self.doc_lenghts.len() as u32
+        self.documents.len() as u32
+    }
+
+    pub fn get_document_len(&self, doc_id: u32) -> u32 {
+        self.documents[doc_id as usize].lenght
+    }
+
+    pub fn get_document_path(&self, doc_id: u32) -> String {
+        self.documents[doc_id as usize].path.clone()
     }
 
     pub fn get_term(&mut self, term: &str) -> Option<postings::PostingList> {
@@ -81,9 +90,8 @@ impl Display for Index {
 
 #[cfg(test)]
 mod test {
-    use crate::test_utils::utils::create_temporary_dir_path;
-
     use super::*;
+    use crate::test_utils::utils::create_temporary_dir_path;
 
     #[test]
     fn test_build() {
@@ -102,12 +110,21 @@ mod test {
         }
 
         let pl = idx.get_term("hello").unwrap();
+
+        let mut hello_docs = pl
+            .documents
+            .iter()
+            .map(|d| idx.get_document_path(d.document_id))
+            .collect::<Vec<String>>();
+
+        hello_docs.sort();
+
         assert_eq!(
-            pl.documents
-                .iter()
-                .map(|d| d.document_id)
-                .collect::<Vec<u32>>(),
-            [0, 1]
+            hello_docs,
+            [
+                "data/index_unit_test/docs/1.txt",
+                "data/index_unit_test/docs/2.txt"
+            ]
         );
 
         assert_eq!(pl.collection_frequency, 2);

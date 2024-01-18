@@ -8,17 +8,22 @@ use search::query::QueryProcessor;
 
 use indicatif::HumanDuration;
 
-const NUM_RESULTS: usize = 1000000;
+const NUM_RESULTS: usize = 1_000_000;
 
-fn print_results(results: &[u32], elapsed_time: Duration) {
-    // println!("\nSearch Results:");
+fn print_results(results: &[String], elapsed_time: Duration) {
+    if results.is_empty() {
+        println!("\nNo documents found\n");
+        return;
+    }
 
-    // for (i, doc_id) in results.iter().enumerate() {
-    //     println!("\t- {:3}. Doc ID: {}", i + 1, doc_id);
-    // }
+    println!("\nTop 10 results:\n");
+
+    for (i, doc_id) in results.iter().take(10).enumerate() {
+        println!("\t{:2}. {}", i + 1, doc_id);
+    }
 
     println!(
-        "\nFetched {} documents in {} ms",
+        "\nFetched {} documents in {} ms\n",
         results.len(),
         elapsed_time.as_millis()
     );
