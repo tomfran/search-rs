@@ -97,13 +97,9 @@ mod test {
     fn test_build() {
         let index_path = &create_temporary_dir_path();
 
-        Index::build_index(
-            "data/index_unit_test/docs",
-            index_path,
-            "data/index_unit_test/test_tokenizer",
-        );
+        Index::build_index("test_data/docs", index_path, "test_data/test_tokenizer");
 
-        let mut idx = Index::load_index(index_path, "data/index_unit_test/test_tokenizer");
+        let mut idx = Index::load_index(index_path, "test_data/test_tokenizer");
 
         for ele in ["hello", "man", "world"] {
             assert!(idx.term_to_index.contains_key(ele));
@@ -119,13 +115,7 @@ mod test {
 
         hello_docs.sort();
 
-        assert_eq!(
-            hello_docs,
-            [
-                "data/index_unit_test/docs/1.txt",
-                "data/index_unit_test/docs/2.txt"
-            ]
-        );
+        assert_eq!(hello_docs, ["test_data/docs/1.txt", "test_data/docs/2.txt"]);
 
         assert_eq!(pl.collection_frequency, 2);
 

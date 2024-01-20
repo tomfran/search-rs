@@ -15,7 +15,7 @@ Search engine written in Rust, based on an inverted index on disk.
 
 **Index construction**
 - [x] In-memory datasets index construction;
-- [ ] Proper vocabulary and paths on disk;
+- [x] Proper vocabulary and paths on disk;
 - [ ] Spelling correction index;
 - [ ] Disk-based partial index construction and merging;
 
@@ -29,6 +29,10 @@ Search engine written in Rust, based on an inverted index on disk.
 - [ ] Query speed;
 - [ ] Query quality; 
 - [ ] Disk overhead.
+
+**Client**
+- [x] CLI
+- [ ] Web interface
 
 ## Crates in use
 - [stemmer-rs](https://github.com/lise-henry/stemmer-rs)

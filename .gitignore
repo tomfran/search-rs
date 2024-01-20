@@ -19,11 +19,7 @@ Cargo.lock
 /target
 
 # Data files
-/data/wiki-data
-/data/index_unit_test/index
-/data/test
-/data/small
-/data/illinois
+/data
 
 # TODO
 todo.md

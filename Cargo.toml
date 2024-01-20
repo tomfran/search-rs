@@ -1,17 +1,6 @@
-[package]
-name = "search-rs"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[lib]
-name = "search"
-path = "src/lib.rs"
-
-[dependencies]
-rand = "0.8"
-tokenizers = { version = "0.15.0", features = ["http"] }
-rust-stemmers = "1.2.0"
-rayon = "1.8.0"
-indicatif = {version = "0.17.0", features = ["rayon", "improved_unicode"]}
-fxhash = "0.2.1"
-tempdir = "0.3.7"
+members = [
+    "search", 
+    "client"
+]

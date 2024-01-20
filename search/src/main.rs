@@ -1,6 +1,6 @@
 use std::env;
 use std::io::{self, Write};
-use std::process::Command;
+use std::process::{exit, Command};
 use std::time::{Duration, Instant};
 
 use search::index::Index;
@@ -53,10 +53,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 3 || args.len() > 5 {
-        println!(
-            "Usage: {} <base_path> <load_or_build> [build_num_threads]",
-            args[0]
-        );
+        println!("Usage: cargo run --bin search <base_path> <load_or_build> [build_num_threads]");
         return;
     }
 
@@ -87,9 +84,12 @@ fn main() {
         Index::build_index(&docs_path, &index_path, &tokenizer_path);
         let elapsed_time = start_time.elapsed();
         println!(
-            "Index built in {}.\n",
-            HumanDuration(Duration::from_secs(elapsed_time.as_secs()))
+            "Index built in {}.\n\nLoad options:\n- CLI: cargo run --release --bin search {} load",
+            HumanDuration(Duration::from_secs(elapsed_time.as_secs())),
+            base_path
         );
+
+        exit(0);
     }
 
     let mut q = QueryProcessor::build_query_processor(&index_path, &tokenizer_path);
