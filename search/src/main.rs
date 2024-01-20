@@ -1,25 +1,25 @@
+use indicatif::HumanDuration;
+use search::index::Index;
+use search::query::{DocumentResult, QueryProcessor};
+use std::cmp::min;
 use std::env;
 use std::io::{self, Write};
 use std::process::{exit, Command};
 use std::time::{Duration, Instant};
 
-use search::index::Index;
-use search::query::QueryProcessor;
-
-use indicatif::HumanDuration;
-
+const NUM_TOP_RESULTS: usize = 10;
 const NUM_RESULTS: usize = 1_000_000;
 
-fn print_results(results: &[String], elapsed_time: Duration) {
+fn print_results(results: &[DocumentResult], elapsed_time: Duration) {
     if results.is_empty() {
         println!("\nNo documents found\n");
         return;
     }
 
-    println!("\nTop 10 results:\n");
+    println!("\nTop {} results:\n", min(results.len(), NUM_TOP_RESULTS));
 
-    for (i, doc_id) in results.iter().take(10).enumerate() {
-        println!("\t{:2}. {}", i + 1, doc_id);
+    for (i, doc) in results.iter().take(NUM_TOP_RESULTS).enumerate() {
+        println!("{:2}. score: {:>5.3}, path: {}", i + 1, doc.score, doc.path);
     }
 
     println!(
@@ -105,6 +105,7 @@ fn main() {
         let start_time = Instant::now();
         let results = q.query(&query, NUM_RESULTS);
         let elapsed_time = start_time.elapsed();
+
         print_results(&results, elapsed_time);
     }
 }

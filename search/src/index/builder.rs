@@ -1,14 +1,3 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    fs,
-    sync::Mutex,
-};
-
-use indicatif::{ParallelProgressIterator, ProgressStyle};
-use rayon::prelude::*;
-use rust_stemmers::Stemmer;
-use tokenizers::Tokenizer;
-
 use super::{
     documents::{write_documents, Document},
     postings::{write_postings, PostingEntry, PostingList},
@@ -16,6 +5,15 @@ use super::{
     vocabulary::write_vocabulary,
     InMemoryIndex,
 };
+use indicatif::{ParallelProgressIterator, ProgressStyle};
+use rayon::prelude::*;
+use rust_stemmers::Stemmer;
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    sync::Mutex,
+};
+use tokenizers::Tokenizer;
 
 const PROGRESS_STYLE: &str =
     "Documents per second: {per_sec:<3}\n\n[{elapsed_precise}] [{bar:50}] {pos}/{len} [{eta_precise}]";

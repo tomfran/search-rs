@@ -7,7 +7,6 @@ mod vocabulary;
 use fxhash::FxHashMap;
 use rust_stemmers::Stemmer;
 use std::collections::BTreeMap;
-use std::fmt::Display;
 use tokenizers::Tokenizer;
 
 use crate::disk::bits_reader::BitsReader;
@@ -74,17 +73,6 @@ impl Index {
 
     pub fn tokenize_and_stem_query(&self, query: &str) -> Vec<String> {
         text::tokenize_and_stem(&self.tokenizer, &self.stemmer, query)
-    }
-}
-
-impl Display for Index {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Index:\n- vocab size: {}\n- num. documents: {})",
-            self.term_to_index.len(),
-            self.get_num_documents()
-        )
     }
 }
 

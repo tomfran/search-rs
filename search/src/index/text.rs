@@ -1,6 +1,5 @@
-use std::{fs::create_dir_all, path::Path};
-
 use rust_stemmers::{Algorithm, Stemmer};
+use std::{fs::create_dir_all, path::Path};
 use tokenizers::Tokenizer;
 
 pub fn load_tokenizer(filename: &str, force_download: bool) -> Tokenizer {

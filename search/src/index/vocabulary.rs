@@ -1,8 +1,6 @@
-use fxhash::FxHashMap;
-
-use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
-
 use super::{InMemoryIndex, VOCABULARY_ALPHA_EXTENSION};
+use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
+use fxhash::FxHashMap;
 
 pub fn write_vocabulary(index: &InMemoryIndex, output_path: &str) {
     let terms_path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;

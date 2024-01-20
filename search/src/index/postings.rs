@@ -1,6 +1,5 @@
-use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
-
 use super::{InMemoryIndex, OFFSETS_EXTENSION, POSTINGS_EXTENSION};
+use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 
 #[derive(Debug, Default)]
 pub struct PostingList {

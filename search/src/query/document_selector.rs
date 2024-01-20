@@ -1,9 +1,9 @@
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 #[derive(Debug)]
-struct Entry {
-    id: u32,
-    score: f32,
+pub struct Entry {
+    pub id: u32,
+    pub score: f32,
 }
 
 impl PartialEq for Entry {
@@ -47,13 +47,8 @@ impl DocumentSelector {
         }
     }
 
-    pub fn get_sorted_ids(&mut self) -> Vec<u32> {
-        let mut res: Vec<u32> = (0..self.capacity)
-            .map(|_| self.heap.pop())
-            .filter(|e| e.is_some())
-            .map(|e: Option<Entry>| e.unwrap().id)
-            .collect();
-
+    pub fn get_sorted_entries(&mut self) -> Vec<Entry> {
+        let mut res: Vec<Entry> = (0..self.capacity).flat_map(|_| self.heap.pop()).collect();
         res.reverse();
         res
     }
@@ -72,7 +67,14 @@ mod test {
         selector.push(1, 0.5);
         selector.push(4, 0.2);
 
-        assert_eq!(selector.get_sorted_ids(), [1, 2]);
+        assert_eq!(
+            selector
+                .get_sorted_entries()
+                .iter()
+                .map(|e| e.id)
+                .collect::<Vec<_>>(),
+            [1, 2]
+        );
     }
 
     #[test]
@@ -82,6 +84,13 @@ mod test {
         selector.push(1, 0.5);
         selector.push(2, 0.4);
 
-        assert_eq!(selector.get_sorted_ids(), [1, 2]);
+        assert_eq!(
+            selector
+                .get_sorted_entries()
+                .iter()
+                .map(|e| e.id)
+                .collect::<Vec<_>>(),
+            [1, 2]
+        );
     }
 }

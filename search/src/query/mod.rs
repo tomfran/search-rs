@@ -6,10 +6,17 @@ use self::document_selector::DocumentSelector;
 
 mod document_selector;
 
-const WINDOW_MULTIPLIER: f32 = 100.0;
+const WINDOW_MULTIPLIER: f32 = 10.0;
+
 pub struct QueryProcessor {
     index: Index,
     num_documents: u32,
+}
+
+pub struct DocumentResult {
+    pub id: u32,
+    pub path: String,
+    pub score: f32,
 }
 
 #[derive(Default)]
@@ -32,7 +39,22 @@ impl QueryProcessor {
         }
     }
 
-    pub fn query(&mut self, query: &str, num_results: usize) -> Vec<String> {
+    pub fn query(&mut self, query: &str, num_results: usize) -> Vec<DocumentResult> {
+        self.get_sorted_document_entries(query, num_results)
+            .iter()
+            .map(|e| DocumentResult {
+                id: e.id,
+                score: e.score,
+                path: self.index.get_document_path(e.id),
+            })
+            .collect()
+    }
+
+    fn get_sorted_document_entries(
+        &mut self,
+        query: &str,
+        num_results: usize,
+    ) -> Vec<document_selector::Entry> {
         let mut scores: HashMap<u32, DocumentScore> = HashMap::new();
 
         let tokens = self.index.tokenize_and_stem_query(query);
@@ -69,15 +91,10 @@ impl QueryProcessor {
         scores.iter_mut().for_each(|(id, score)| {
             // tf-idf score must be divided by the document len
             score.tf_idf /= self.index.get_document_len(*id) as f32;
-
             selector.push(*id, QueryProcessor::compute_score(score, num_tokens));
         });
 
-        selector
-            .get_sorted_ids()
-            .iter()
-            .map(|i| self.index.get_document_path(*i))
-            .collect()
+        selector.get_sorted_entries()
     }
 
     // score takes into consideration the window size and td-idf scoring
@@ -99,7 +116,7 @@ impl QueryProcessor {
 
             while seen.len() == num_tokens && j < arr.len() {
                 let (j_pos, j_id) = arr[j];
-                window = min(window, pos - j_pos);
+                window = min(window, pos - j_pos + 1);
 
                 seen.entry(j_id).and_modify(|c| *c -= 1);
                 if *seen.get(&j_id).unwrap() == 0 {
@@ -110,6 +127,6 @@ impl QueryProcessor {
             }
         }
 
-        WINDOW_MULTIPLIER * (1.0 / window as f32) + document_score.tf_idf
+        WINDOW_MULTIPLIER * (num_tokens as f32 / window as f32) + document_score.tf_idf
     }
 }

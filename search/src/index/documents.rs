@@ -1,6 +1,5 @@
-use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
-
 use super::DOCUMENTS_EXTENSION;
+use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 
 #[derive(Clone)]
 pub struct Document {
