@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>search-rs</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <script src="https://unpkg.com/htmx.org@1.9.9"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            /* align-items: center; */
+            /* Center vertically */
+            /* height: 100vh; */
+            width: 60vw;
+            margin: auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .search-container {
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        .search-title {
+            font-size: 60px;
+            padding-bottom: 10px;
+        }
+
+        .search-bar-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .search-bar {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+            font-size: 18px;
+            width: 400px;
+            background-color: #333;
+            color: #fff;
+            padding-left: 40px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc;
+        }
+
+        .search-time {
+            margin: 10px;
+        }
+
+        .search-result {
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="search-container">
+        <h1 class="search-title">index on {{index_path}}</h1>
+        <div class="search-bar-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-bar" name="query" autofocus hx-post="/query" hx-ext='json-enc'
+                hx-target=".search-results" hx-trigger="keyup[keyCode==13]">
+        </div>
+        <div class="search-results" hx-target=".search-results">
+            <!-- Search results will appear here -->
+        </div>
+    </div>
+
+</body>
+
+</html>

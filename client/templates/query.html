@@ -1,0 +1,4 @@
+<div class="search-time">Query completed in {{ time_ms }} ms<div>
+{% for doc in documents %}
+<div class="search-result">{{ loop.index }} - {{ doc.path }}</div>
+{% endfor %}

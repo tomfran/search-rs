@@ -2,6 +2,7 @@ mod builder;
 mod documents;
 mod postings;
 mod text;
+mod utils;
 mod vocabulary;
 
 use fxhash::FxHashMap;

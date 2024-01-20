@@ -88,13 +88,13 @@ pub fn load_postings_list(postings_reader: &mut BitsReader, offset: u64) -> Post
 }
 
 pub fn load_offsets(input_path: &str) -> Vec<u64> {
-    let offsets_path = input_path.to_string() + OFFSETS_EXTENSION;
-    let mut offsets_reader = BitsReader::new(&offsets_path);
+    let path = input_path.to_string() + OFFSETS_EXTENSION;
+    let mut reader = BitsReader::new(&path);
 
     let mut offset = 0;
-    (0..offsets_reader.read_vbyte())
+    (0..reader.read_vbyte())
         .map(|_| {
-            offset += offsets_reader.read_gamma() as u64;
+            offset += reader.read_gamma() as u64;
             offset
         })
         .collect()

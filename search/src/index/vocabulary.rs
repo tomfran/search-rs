@@ -1,63 +1,43 @@
-use super::{InMemoryIndex, VOCABULARY_ALPHA_EXTENSION};
+use super::{utils, InMemoryIndex, VOCABULARY_ALPHA_EXTENSION};
 use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 use fxhash::FxHashMap;
 
 pub fn write_vocabulary(index: &InMemoryIndex, output_path: &str) {
-    let terms_path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
-    let mut terms_writer = BitsWriter::new(&terms_path);
+    let path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
+    let mut writer = BitsWriter::new(&path);
 
     let vocab = &index.term_index_map;
 
-    terms_writer.write_vbyte(vocab.len() as u32);
+    writer.write_vbyte(vocab.len() as u32);
 
     let mut prev = "";
 
     vocab.keys().for_each(|s| {
-        let p_len = get_matching_prefix_len(prev, s);
-        terms_writer.write_gamma(p_len as u32);
+        let p_len = utils::get_matching_prefix_len(prev, s);
+        writer.write_gamma(p_len as u32);
         let remaining: String = s.chars().skip(p_len).collect();
-        terms_writer.write_str(&remaining);
         prev = s;
+
+        writer.write_str(&remaining);
     });
 
-    terms_writer.flush();
-}
-
-fn get_matching_prefix_len(s1: &str, s2: &str) -> usize {
-    s1.chars()
-        .zip(s2.chars())
-        .take_while(|(char1, char2)| char1 == char2)
-        .count()
+    writer.flush();
 }
 
 pub fn load_vocabulary(input_path: &str) -> FxHashMap<String, usize> {
-    let terms_path = input_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
-    let mut terms_reader = BitsReader::new(&terms_path);
+    let path = input_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
+    let mut reader = BitsReader::new(&path);
 
-    let num_terms: u32 = terms_reader.read_vbyte();
+    let num_terms: u32 = reader.read_vbyte();
 
-    let mut prev: String = "".to_string();
+    let mut prev = "".to_string();
     (0..num_terms)
         .map(|i| {
-            let p_len = terms_reader.read_gamma();
+            let p_len = reader.read_gamma();
             let prefix: String = prev.chars().take(p_len as usize).collect();
-            let s = prefix + &terms_reader.read_str();
+            let s = prefix + &reader.read_str();
             prev = s.clone();
             (s, i as usize)
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_matching_prefix_len() {
-        assert_eq!(get_matching_prefix_len("hello", "hell"), 4);
-        assert_eq!(get_matching_prefix_len("abc", "xyz"), 0);
-        assert_eq!(get_matching_prefix_len("", ""), 0);
-        assert_eq!(get_matching_prefix_len("apple", "appetizer"), 3);
-        assert_eq!(get_matching_prefix_len("rust", "rust"), 4);
-    }
 }
