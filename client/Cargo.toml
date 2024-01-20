@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 actix-web = "4.4.1"
 search = { path = "../search" }
+serde = "1.0.195"
