@@ -11,6 +11,7 @@ use search::query::QueryProcessor;
 use serde::{Deserialize, Serialize};
 use std::{
     env,
+    fs::read_to_string,
     sync::{Arc, Mutex},
     time::Instant,
 };
@@ -57,7 +58,6 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// utility struct to render templates
 struct HtmlTemplate<T>(T);
 
 impl<T> IntoResponse for HtmlTemplate<T>
@@ -77,7 +77,6 @@ where
     }
 }
 
-// homepage
 #[derive(Template)]
 #[template(path = "index.html")]
 struct Root {
@@ -91,12 +90,9 @@ async fn root(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     })
 }
 
-// query handler
-
 #[derive(Deserialize, Debug)]
 struct QueryRequest {
     query: String,
-    // limit: usize,
 }
 
 #[derive(Template)]
@@ -111,6 +107,7 @@ struct Document {
     id: u32,
     score: f32,
     path: String,
+    content: String,
 }
 
 async fn post_query(
@@ -122,7 +119,7 @@ async fn post_query(
     let mut q = state.query_processor.lock().unwrap();
 
     let start_time = Instant::now();
-    let query_result = q.query(&payload.query, 10);
+    let query_result = q.query(&payload.query, 100);
     let time_ms = start_time.elapsed().as_millis();
 
     let documents = query_result
@@ -131,8 +128,13 @@ async fn post_query(
             id: r.id,
             score: r.score,
             path: r.path.clone(),
+            content: read_file_content(r.path.clone()),
         })
         .collect();
 
     HtmlTemplate(QueryResponse { time_ms, documents })
+}
+
+fn read_file_content(path: String) -> String {
+    read_to_string(path).expect("error while reading file")
 }
