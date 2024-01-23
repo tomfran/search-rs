@@ -30,13 +30,13 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        println!("Usage: cargo run --bin client <base_path>");
+        println!("Usage: cargo run --bin server <base_path>");
         return;
     }
 
     let base_path = &args[1];
     let index_path = format!("{}/index/index", base_path);
-    let tokenizer_path = format!("{}/tokenizer/bert-base-uncased", base_path);
+    let tokenizer_path = format!("{}/tokenizer/roberta-large", base_path);
 
     let state = Arc::new(AppState {
         query_processor: Mutex::new(QueryProcessor::build_query_processor(

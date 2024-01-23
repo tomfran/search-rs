@@ -62,7 +62,7 @@ fn main() {
     let build_index = action == "build";
 
     let index_path = format!("{}/index/index", base_path);
-    let tokenizer_path = format!("{}/tokenizer/bert-base-uncased", base_path);
+    let tokenizer_path = format!("{}/tokenizer/roberta-large", base_path);
     let docs_path = format!("{}/docs", base_path);
 
     if build_index {

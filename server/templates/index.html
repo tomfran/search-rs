@@ -23,7 +23,6 @@
         }
     </style>
 
-
     <title>search-rs</title>
 </head>
 
@@ -32,10 +31,21 @@
     <!-- Main Content -->
     <div class="container mx-auto mt-16 max-w-3xl">
 
+        <div class="flex content-center mb-16">
+            <div class="text-6xl font-medium mr-6">
+                <a href="https://github.com/tomfran/search-rs">
+                    search-rs
+                </a>
+            </div>
+            <div class="w-20 h-20 flex justify-center items-center">
+                <img alt="Rust's Crab" src="https://rustacean.net/assets/rustacean-flat-noshadow.png" />
+            </div>
+        </div>
+
         <!-- Search Heading -->
         <div class="mb-6">
-            <h1 class="text-3xl font-bold my-3">Index on {{index_path}}</h1>
-            <input type="text" class="w-full mt-10 p-4 rounded-md bg-neutral-800 text-white"
+            <h1 class="text-3xl font-medium mb-10">Index on {{index_path}}</h1>
+            <input type="text" class="outline-neutral-900 w-full p-4 rounded-md bg-neutral-800 text-white"
                 placeholder="Enter your search query..." autofocus name="query" hx-post="/query" hx-ext='json-enc'
                 hx-target=".search-results" hx-trigger="keyup[keyCode==13]">
         </div>
