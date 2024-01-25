@@ -16,13 +16,16 @@ impl Eq for Entry {}
 
 impl PartialOrd for Entry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.score.partial_cmp(&self.score)
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for Entry {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.partial_cmp(self).unwrap()
+        other
+            .score
+            .partial_cmp(&self.score)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
