@@ -1,6 +1,6 @@
 use indicatif::HumanDuration;
 use search::index::Index;
-use search::query::{DocumentResult, QueryProcessor};
+use search::query::{QueryProcessor, QueryResult};
 use std::cmp::min;
 use std::env;
 use std::io::{self, Write};
@@ -10,22 +10,27 @@ use std::time::{Duration, Instant};
 const NUM_TOP_RESULTS: usize = 10;
 const NUM_RESULTS: usize = 1_000_000;
 
-fn print_results(results: &[DocumentResult], elapsed_time: Duration) {
-    if results.is_empty() {
+fn print_results(result: QueryResult) {
+    println!("Search tokens: {:?}", result.tokens);
+
+    if result.documents.is_empty() {
         println!("\nNo documents found\n");
         return;
     }
 
-    println!("\nTop {} results:\n", min(results.len(), NUM_TOP_RESULTS));
+    println!(
+        "\nTop {} results:\n",
+        min(result.documents.len(), NUM_TOP_RESULTS)
+    );
 
-    for (i, doc) in results.iter().take(NUM_TOP_RESULTS).enumerate() {
+    for (i, doc) in result.documents.iter().take(NUM_TOP_RESULTS).enumerate() {
         println!("{:2}. score: {:>5.3}, path: {}", i + 1, doc.score, doc.path);
     }
 
     println!(
         "\nFetched {} documents in {} ms\n",
-        results.len(),
-        elapsed_time.as_millis()
+        result.documents.len(),
+        result.time_ms,
     );
 }
 
@@ -61,8 +66,7 @@ fn main() {
     let action = &args[2];
     let build_index = action == "build";
 
-    let index_path = format!("{}/index/index", base_path);
-    let tokenizer_path = format!("{}/tokenizer/roberta-large", base_path);
+    let index_path = format!("{}/index/idx", base_path);
     let docs_path = format!("{}/docs", base_path);
 
     if build_index {
@@ -81,7 +85,7 @@ fn main() {
 
         let start_time = Instant::now();
 
-        Index::build_index(&docs_path, &index_path, &tokenizer_path);
+        Index::build_index(&docs_path, &index_path);
         let elapsed_time = start_time.elapsed();
         println!(
             "Index built in {}.\n\nLoad options:\n- CLI: cargo run --release --bin search {} load",
@@ -92,7 +96,7 @@ fn main() {
         exit(0);
     }
 
-    let mut q = QueryProcessor::build_query_processor(&index_path, &tokenizer_path);
+    let mut q = QueryProcessor::build_query_processor(&index_path);
 
     println!(
         "Loaded search engine for directory: [{}]\n\nWrite a query and press enter.\n",
@@ -102,10 +106,8 @@ fn main() {
     loop {
         let query = read_line("> ");
 
-        let start_time = Instant::now();
-        let results = q.query(&query, NUM_RESULTS);
-        let elapsed_time = start_time.elapsed();
+        let result = q.query(&query, NUM_RESULTS);
 
-        print_results(&results, elapsed_time);
+        print_results(result);
     }
 }

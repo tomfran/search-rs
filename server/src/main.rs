@@ -1,5 +1,6 @@
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::{Json, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
@@ -13,12 +14,11 @@ use std::{
     env,
     fs::read_to_string,
     sync::{Arc, Mutex},
-    time::Instant,
 };
 
 struct AppState {
-    query_processor: Mutex<QueryProcessor>,
     index_path: String,
+    query_processor: Mutex<QueryProcessor>,
 }
 
 #[tokio::main]
@@ -35,15 +35,11 @@ async fn main() {
     }
 
     let base_path = &args[1];
-    let index_path = format!("{}/index/index", base_path);
-    let tokenizer_path = format!("{}/tokenizer/roberta-large", base_path);
+    let index_path = format!("{}/index/idx", base_path);
 
     let state = Arc::new(AppState {
-        query_processor: Mutex::new(QueryProcessor::build_query_processor(
-            &index_path,
-            &tokenizer_path,
-        )),
         index_path: base_path.clone(),
+        query_processor: Mutex::new(QueryProcessor::build_query_processor(&index_path)),
     });
 
     let app = Router::new()
@@ -98,11 +94,12 @@ struct QueryRequest {
 #[derive(Template)]
 #[template(path = "query.html")]
 struct QueryResponse {
+    tokens: Vec<String>,
     time_ms: u128,
     documents: Vec<Document>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Document {
     id: u32,
     score: f32,
@@ -110,6 +107,7 @@ struct Document {
     content: String,
 }
 
+#[debug_handler]
 async fn post_query(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<QueryRequest>,
@@ -118,11 +116,10 @@ async fn post_query(
 
     let mut q = state.query_processor.lock().unwrap();
 
-    let start_time = Instant::now();
     let query_result = q.query(&payload.query, 100);
-    let time_ms = start_time.elapsed().as_millis();
 
     let documents = query_result
+        .documents
         .iter()
         .map(|r| Document {
             id: r.id,
@@ -132,7 +129,11 @@ async fn post_query(
         })
         .collect();
 
-    HtmlTemplate(QueryResponse { time_ms, documents })
+    HtmlTemplate(QueryResponse {
+        tokens: query_result.tokens,
+        documents,
+        time_ms: query_result.time_ms,
+    })
 }
 
 fn read_file_content(path: String) -> String {

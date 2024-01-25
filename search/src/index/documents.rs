@@ -65,3 +65,61 @@ impl Documents {
         self.docs[doc_id as usize].path.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utils::utils::create_temporary_file_path;
+
+    use super::*;
+
+    #[test]
+    fn test_write_and_load() {
+        let dir = create_temporary_file_path("docs_unit");
+
+        let documents = vec![
+            Document {
+                path: "document1.txt".to_string(),
+                lenght: 100,
+            },
+            Document {
+                path: "document2.txt".to_string(),
+                lenght: 150,
+            },
+        ];
+
+        Documents::write_documents(&documents, &dir);
+        let loaded_documents = Documents::load_documents(&dir);
+
+        assert_eq!(loaded_documents.get_num_documents(), documents.len() as u32);
+
+        for i in 0..documents.len() {
+            assert_eq!(loaded_documents.get_doc_path(i as u32), documents[i].path);
+            assert_eq!(loaded_documents.get_doc_len(i as u32), documents[i].lenght);
+        }
+    }
+
+    #[test]
+    fn test_methods() {
+        let documents = vec![
+            Document {
+                path: "document1.txt".to_string(),
+                lenght: 100,
+            },
+            Document {
+                path: "document2.txt".to_string(),
+                lenght: 150,
+            },
+        ];
+
+        let doc_collection = Documents {
+            docs: documents.clone(),
+        };
+
+        assert_eq!(doc_collection.get_num_documents(), documents.len() as u32);
+
+        for i in 0..documents.len() {
+            assert_eq!(doc_collection.get_doc_path(i as u32), documents[i].path);
+            assert_eq!(doc_collection.get_doc_len(i as u32), documents[i].lenght);
+        }
+    }
+}

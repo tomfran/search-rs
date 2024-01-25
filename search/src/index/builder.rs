@@ -1,19 +1,17 @@
 use super::{
     documents::{Document, Documents},
     postings::{PostingEntry, PostingList, Postings},
-    text,
+    preprocessor::Preprocessor,
     vocabulary::Vocabulary,
     InMemoryIndex,
 };
 use indicatif::{ParallelProgressIterator, ProgressStyle};
 use rayon::prelude::*;
-use rust_stemmers::Stemmer;
 use std::{
     collections::{BTreeMap, HashMap},
     fs,
     sync::Mutex,
 };
-use tokenizers::Tokenizer;
 
 const PROGRESS_STYLE: &str =
     "Documents per second: {per_sec:<3}\n\n[{elapsed_precise}] [{bar:50}] {pos}/{len} [{eta_precise}]";
@@ -21,14 +19,14 @@ const PROGRESS_CHARS: &str = "=> ";
 
 const CUTOFF_THRESHOLD: f64 = 0.8;
 
-pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) {
-    let index: InMemoryIndex = build_in_memory(input_dir, tokenizer, stemmer);
+pub fn build_index(input_dir: &str, output_path: &str, preprocessor: &Preprocessor) {
+    let index: InMemoryIndex = build_in_memory(input_dir, preprocessor);
     Postings::write_postings(&index, output_path);
     Vocabulary::write_vocabulary(&index, output_path);
     Documents::write_documents(&index.documents, output_path);
 }
 
-fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) -> InMemoryIndex {
+fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemoryIndex {
     let files: Vec<fs::DirEntry> = fs::read_dir(input_dir)
         .expect("error while retrieving input directory content")
         .map(|p| p.unwrap())
@@ -54,7 +52,7 @@ fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) ->
         )
         .for_each(|d| {
             let file_content = fs::read_to_string(d.path()).expect("error while reading file");
-            let tokens = text::tokenize_and_stem(tokenizer, stemmer, &file_content);
+            let tokens = preprocessor.tokenize_and_stem(&file_content);
 
             let mut doc_id = doc_id_mutex.lock().unwrap();
 

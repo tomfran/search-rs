@@ -1,17 +1,15 @@
 mod builder;
 mod documents;
 mod postings;
-mod text;
+mod preprocessor;
 mod utils;
 mod vocabulary;
 
-use rust_stemmers::Stemmer;
-use std::collections::BTreeMap;
-use tokenizers::Tokenizer;
-
 use self::documents::{Document, Documents};
 use self::postings::{PostingList, Postings};
+use self::preprocessor::Preprocessor;
 use self::vocabulary::Vocabulary;
+use std::collections::BTreeMap;
 
 pub const POSTINGS_EXTENSION: &str = ".postings";
 pub const OFFSETS_EXTENSION: &str = ".offsets";
@@ -22,8 +20,7 @@ pub struct Index {
     vocabulary: Vocabulary,
     postings: Postings,
     documents: Documents,
-    tokenizer: Tokenizer,
-    stemmer: Stemmer,
+    preprocessor: Preprocessor,
 }
 
 pub struct InMemoryIndex {
@@ -33,19 +30,16 @@ pub struct InMemoryIndex {
 }
 
 impl Index {
-    pub fn build_index(input_path: &str, output_path: &str, tokenizer_path: &str) {
-        let tokenizer = text::load_tokenizer(tokenizer_path, false);
-        let stemmer = text::load_stemmer();
-        builder::build_index(input_path, output_path, &tokenizer, &stemmer);
+    pub fn build_index(input_path: &str, output_path: &str) {
+        builder::build_index(input_path, output_path, &Preprocessor::new());
     }
 
-    pub fn load_index(input_path: &str, tokenizer_path: &str) -> Index {
+    pub fn load_index(input_path: &str) -> Index {
         Index {
             vocabulary: Vocabulary::load_vocabulary(input_path),
             postings: Postings::load_postings_reader(input_path),
             documents: Documents::load_documents(input_path),
-            tokenizer: text::load_tokenizer(tokenizer_path, false),
-            stemmer: text::load_stemmer(),
+            preprocessor: Preprocessor::new(),
         }
     }
 
@@ -55,8 +49,8 @@ impl Index {
             .map(|i| self.postings.load_postings_list(i))
     }
 
-    pub fn tokenize_and_stem_query(&self, query: &str) -> Vec<String> {
-        text::tokenize_and_stem(&self.tokenizer, &self.stemmer, query)
+    pub fn get_query_tokens(&self, query: &str) -> Vec<String> {
+        self.preprocessor.tokenize_and_stem(query)
     }
 
     pub fn get_num_documents(&self) -> u32 {
@@ -81,9 +75,9 @@ mod test {
     fn test_build() {
         let index_path = &create_temporary_dir_path();
 
-        Index::build_index("test_data/docs", index_path, "test_data/test_tokenizer");
+        Index::build_index("test_data/docs", index_path);
 
-        let mut idx = Index::load_index(index_path, "test_data/test_tokenizer");
+        let mut idx = Index::load_index(index_path);
 
         for ele in ["hello", "man", "world"] {
             assert!(idx.vocabulary.get_term_index(ele).is_some());

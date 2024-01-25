@@ -1,10 +1,25 @@
 <div>
 
-    <!-- Title -->
+    {% if documents.len() == 0 %}
+    <h1 class="text-xl"> No documents found</h1>
+    {% else %}
     <h1 class="text-xl"> Search results</h1>
-    <h1 class=" font-light text-sm  mt-1 mb-6">Query time: {{ time_ms }}ms</h1>
+    {% endif %}
 
-    <!-- Documents -->
+    <h1 class=" font-light text-md  mt-3 mb-3">
+        Query time: {{ time_ms }}ms
+    </h1>
+    <h1 class=" font-light text-md mb-6">
+        Searched tokens:
+        {% for t in tokens %}
+        {{t}}
+        {% if !loop.last %}
+        -
+        {% endif %}
+        {% endfor %}
+    </h1>
+
+
     {% for doc in documents %}
 
     <div>
@@ -13,11 +28,14 @@
                 {{ doc.path }}
             </h2>
             <p class="text-neutral-300">
-                {{ doc.content|truncate(300) }}
+                <!-- {{ doc.content|truncate(300) }} -->
+                {{ doc.content }}
             </p>
         </div>
     </div>
 
     {% endfor %}
+
+
 
 </div>

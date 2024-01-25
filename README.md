@@ -16,12 +16,11 @@ Search engine written in Rust, based on an inverted index on disk.
 **Index construction**
 - [x] In-memory datasets index construction;
 - [x] Proper vocabulary and paths on disk;
-- [ ] Spelling correction index.
+- [ ] Spelling correction index: in progress.
 
 **Queries**
 - [x] Tf-idf ranked retrieval;
 - [x] Window computation;
-- [ ] FIle content retrieval.
 
 **Evaluation**
 - [ ] Query speed;
@@ -30,13 +29,7 @@ Search engine written in Rust, based on an inverted index on disk.
 
 **Client**
 - [x] CLI;
-- [ ] Web interface.
-
-## Crates in use
-- [stemmer-rs](https://github.com/lise-henry/stemmer-rs)
-- [tokenizers](https://github.com/huggingface/tokenizers)
-- [indicatif](https://github.com/console-rs/indicatif)
-- [fxhash](https://github.com/cbreeden/fxhash)
+- [x] Web interface.
 
 ## References
 [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/information-retrieval-book.html) - Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze

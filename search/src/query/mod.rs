@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap};
+use std::{cmp::min, collections::HashMap, time::Instant};
 
 use crate::index::Index;
 
@@ -11,6 +11,12 @@ const WINDOW_MULTIPLIER: f32 = 10.0;
 pub struct QueryProcessor {
     index: Index,
     num_documents: u32,
+}
+
+pub struct QueryResult {
+    pub tokens: Vec<String>,
+    pub documents: Vec<DocumentResult>,
+    pub time_ms: u128,
 }
 
 pub struct DocumentResult {
@@ -26,11 +32,8 @@ struct DocumentScore {
 }
 
 impl QueryProcessor {
-    pub fn build_query_processor(
-        index_input_path: &str,
-        index_tokenizer_path: &str,
-    ) -> QueryProcessor {
-        let index = Index::load_index(index_input_path, index_tokenizer_path);
+    pub fn build_query_processor(index_input_path: &str) -> QueryProcessor {
+        let index = Index::load_index(index_input_path);
         let num_documents = index.get_num_documents();
 
         QueryProcessor {
@@ -39,25 +42,36 @@ impl QueryProcessor {
         }
     }
 
-    pub fn query(&mut self, query: &str, num_results: usize) -> Vec<DocumentResult> {
-        self.get_sorted_document_entries(query, num_results)
+    pub fn query(&mut self, query: &str, num_results: usize) -> QueryResult {
+        let start_time = Instant::now();
+
+        let tokens = self.index.get_query_tokens(query);
+
+        let documents = self
+            .get_sorted_document_entries(tokens.clone(), num_results)
             .iter()
             .map(|e| DocumentResult {
                 id: e.id,
                 score: e.score,
                 path: self.index.get_document_path(e.id),
             })
-            .collect()
+            .collect();
+
+        let time_ms = start_time.elapsed().as_millis();
+
+        QueryResult {
+            tokens,
+            documents,
+            time_ms,
+        }
     }
 
     fn get_sorted_document_entries(
         &mut self,
-        query: &str,
+        tokens: Vec<String>,
         num_results: usize,
     ) -> Vec<document_selector::Entry> {
         let mut scores: HashMap<u32, DocumentScore> = HashMap::new();
-
-        let tokens = self.index.tokenize_and_stem_query(query);
 
         for (id, token) in tokens.iter().enumerate() {
             if let Some(postings) = self.index.get_term_postings(token) {

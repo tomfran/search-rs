@@ -2,6 +2,7 @@ use super::{utils, InMemoryIndex, VOCABULARY_ALPHA_EXTENSION};
 use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 use fxhash::FxHashMap;
 
+#[allow(dead_code)]
 pub struct Vocabulary {
     term_to_index: FxHashMap<String, usize>,
     frequencies: Vec<u32>,
@@ -67,8 +68,12 @@ impl Vocabulary {
 
         // build trigram index
         let mut trigram_index = FxHashMap::default();
+
         for (index, term) in index_to_term.iter().enumerate() {
             let term_chars: Vec<char> = term.chars().collect();
+            if term_chars.len() < 3 {
+                continue;
+            }
 
             for i in 0..term_chars.len() - 2 {
                 let trigram = &term_chars[i..i + 3];
@@ -91,5 +96,73 @@ impl Vocabulary {
 
     pub fn get_term_index(&self, term: &str) -> Option<usize> {
         self.term_to_index.get(term).map(|i| *i)
+    }
+
+    #[allow(dead_code)]
+
+    pub fn get_term_index_spellcheck(&self, term: &str) -> Option<usize> {
+        self.get_term_index(term)
+            .or_else(|| self.get_closest_index(term))
+    }
+    #[allow(dead_code)]
+
+    fn get_closest_index(&self, term: &str) -> Option<usize> {
+        let candidates = (0..term.len() - 2)
+            .map(|i| term[i..i + 3].to_string())
+            .flat_map(|t| self.trigram_index.get(&t))
+            .flat_map(|v| v.into_iter());
+
+        candidates
+            .min_by_key(|i| Self::distance(term, &self.index_to_term[**i]))
+            .map(|i| *i)
+    }
+
+    #[allow(unused_variables)]
+    fn distance(s1: &str, s2: &str) -> u32 {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use crate::{index::postings::PostingList, test_utils::utils::create_temporary_file_path};
+
+    use super::*;
+
+    #[test]
+    fn test_write_and_load() {
+        let dir = create_temporary_file_path("vocab_unit");
+
+        let mut map = BTreeMap::new();
+        map.insert("hello".to_string(), 0);
+        map.insert("world".to_string(), 0);
+
+        let mut postings = Vec::new();
+        postings.push(PostingList {
+            collection_frequency: 1,
+            documents: Vec::new(),
+        });
+        postings.push(PostingList {
+            collection_frequency: 2,
+            documents: Vec::new(),
+        });
+
+        let index = InMemoryIndex {
+            term_index_map: map,
+            postings: postings,
+            documents: Vec::new(),
+        };
+
+        Vocabulary::write_vocabulary(&index, &dir);
+        let loaded_vocabulary = Vocabulary::load_vocabulary(&dir);
+
+        assert_eq!(loaded_vocabulary.index_to_term, ["hello", "world"]);
+        assert_eq!(loaded_vocabulary.frequencies, [1, 2]);
+
+        assert_eq!(*loaded_vocabulary.trigram_index.get("hel").unwrap(), [0]);
+        assert_eq!(*loaded_vocabulary.trigram_index.get("ell").unwrap(), [0]);
+        assert_eq!(*loaded_vocabulary.trigram_index.get("rld").unwrap(), [1]);
     }
 }
