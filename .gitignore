@@ -25,3 +25,5 @@ Cargo.lock
 todo.md
 
 /misc
+
+.DS_Store
