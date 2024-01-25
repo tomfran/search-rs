@@ -1,8 +1,8 @@
 use super::{
-    documents::{write_documents, Document},
-    postings::{write_postings, PostingEntry, PostingList},
+    documents::{Document, Documents},
+    postings::{PostingEntry, PostingList, Postings},
     text,
-    vocabulary::write_vocabulary,
+    vocabulary::Vocabulary,
     InMemoryIndex,
 };
 use indicatif::{ParallelProgressIterator, ProgressStyle};
@@ -23,9 +23,9 @@ const CUTOFF_THRESHOLD: f64 = 0.8;
 
 pub fn build_index(input_dir: &str, output_path: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) {
     let index: InMemoryIndex = build_in_memory(input_dir, tokenizer, stemmer);
-    write_postings(&index, output_path);
-    write_vocabulary(&index, output_path);
-    write_documents(&index.documents, output_path);
+    Postings::write_postings(&index, output_path);
+    Vocabulary::write_vocabulary(&index, output_path);
+    Documents::write_documents(&index.documents, output_path);
 }
 
 fn build_in_memory(input_dir: &str, tokenizer: &Tokenizer, stemmer: &Stemmer) -> InMemoryIndex {

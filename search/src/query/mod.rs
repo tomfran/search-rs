@@ -60,7 +60,7 @@ impl QueryProcessor {
         let tokens = self.index.tokenize_and_stem_query(query);
 
         for (id, token) in tokens.iter().enumerate() {
-            if let Some(postings) = self.index.get_term(token) {
+            if let Some(postings) = self.index.get_term_postings(token) {
                 let idf = (self.num_documents as f32 / postings.collection_frequency as f32).log2();
 
                 // for each term-doc pair, increment the documetn tf-idf score
