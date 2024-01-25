@@ -23,7 +23,7 @@ pub struct Index {
     preprocessor: Preprocessor,
 }
 
-pub struct InMemoryIndex {
+pub struct InMemory {
     term_index_map: BTreeMap<String, usize>,
     postings: Vec<PostingList>,
     documents: Vec<Document>,

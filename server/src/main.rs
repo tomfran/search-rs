@@ -8,7 +8,7 @@ use axum::{
     Router,
 };
 use log::info;
-use search::query::QueryProcessor;
+use search::query::Processor;
 use serde::{Deserialize, Serialize};
 use std::{
     env,
@@ -18,7 +18,7 @@ use std::{
 
 struct AppState {
     index_path: String,
-    query_processor: Mutex<QueryProcessor>,
+    query_processor: Mutex<Processor>,
 }
 
 #[tokio::main]
@@ -35,11 +35,11 @@ async fn main() {
     }
 
     let base_path = &args[1];
-    let index_path = format!("{}/index/idx", base_path);
+    let index_path = format!("{base_path}/index/idx");
 
     let state = Arc::new(AppState {
         index_path: base_path.clone(),
-        query_processor: Mutex::new(QueryProcessor::build_query_processor(&index_path)),
+        query_processor: Mutex::new(Processor::build_query_processor(&index_path)),
     });
 
     let app = Router::new()
@@ -66,7 +66,7 @@ where
 
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to render template. Error: {}", err),
+                format!("Failed to render template. Error: {err}"),
             )
                 .into_response(),
         }
@@ -102,7 +102,7 @@ struct QueryResponse {
 #[derive(Deserialize, Serialize)]
 struct Document {
     id: u32,
-    score: f32,
+    score: f64,
     path: String,
     content: String,
 }

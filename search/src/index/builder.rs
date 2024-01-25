@@ -3,7 +3,7 @@ use super::{
     postings::{PostingEntry, PostingList, Postings},
     preprocessor::Preprocessor,
     vocabulary::Vocabulary,
-    InMemoryIndex,
+    InMemory,
 };
 use indicatif::{ParallelProgressIterator, ProgressStyle};
 use rayon::prelude::*;
@@ -20,16 +20,16 @@ const PROGRESS_CHARS: &str = "=> ";
 const CUTOFF_THRESHOLD: f64 = 0.8;
 
 pub fn build_index(input_dir: &str, output_path: &str, preprocessor: &Preprocessor) {
-    let index: InMemoryIndex = build_in_memory(input_dir, preprocessor);
+    let index: InMemory = build_in_memory(input_dir, preprocessor);
     Postings::write_postings(&index, output_path);
     Vocabulary::write_vocabulary(&index, output_path);
     Documents::write_documents(&index.documents, output_path);
 }
 
-fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemoryIndex {
+fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemory {
     let files: Vec<fs::DirEntry> = fs::read_dir(input_dir)
         .expect("error while retrieving input directory content")
-        .map(|p| p.unwrap())
+        .map(std::result::Result::unwrap)
         .collect();
 
     // document counter
@@ -107,7 +107,7 @@ fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemoryInde
         .filter(|(_, v)| final_postings[*v].collection_frequency <= frequency_threshold)
         .collect();
 
-    InMemoryIndex {
+    InMemory {
         term_index_map: sorted_term_index_map,
         postings: final_postings,
         documents: documents.into_inner().unwrap(),

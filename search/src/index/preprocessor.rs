@@ -18,7 +18,7 @@ impl Preprocessor {
         self.regex
             .replace_all(text, " ")
             .split_whitespace()
-            .map(|t| t.to_lowercase())
+            .map(str::to_lowercase)
             .map(|t| self.stemmer.stem(&t).to_string())
             .collect()
     }

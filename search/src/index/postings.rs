@@ -1,4 +1,4 @@
-use super::{InMemoryIndex, OFFSETS_EXTENSION, POSTINGS_EXTENSION};
+use super::{InMemory, OFFSETS_EXTENSION, POSTINGS_EXTENSION};
 use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 
 #[derive(Default)]
@@ -38,7 +38,7 @@ impl Postings {
         Postings { reader, offsets }
     }
 
-    pub fn write_postings(index: &InMemoryIndex, output_path: &str) {
+    pub fn write_postings(index: &InMemory, output_path: &str) {
         let postings_path = output_path.to_string() + POSTINGS_EXTENSION;
         let mut postings_writer = BitsWriter::new(&postings_path);
 
@@ -50,7 +50,7 @@ impl Postings {
 
         offsets_writer.write_vbyte(index.term_index_map.len() as u32);
 
-        for (_, idx) in index.term_index_map.iter() {
+        for idx in index.term_index_map.values() {
             offsets_writer.write_gamma(offset as u32 - prev_offset);
             prev_offset = offset as u32;
 
@@ -59,13 +59,13 @@ impl Postings {
             offset += postings_writer.write_vbyte(postings.documents.len() as u32);
 
             let mut prev_doc_id = 0;
-            for entry in postings.documents.iter() {
+            for entry in &postings.documents {
                 offset += postings_writer.write_gamma(entry.document_id - prev_doc_id);
                 offset += postings_writer.write_gamma(entry.document_frequency);
 
                 let mut prev_pos = 0;
                 offset += postings_writer.write_vbyte(entry.positions.len() as u32);
-                for pos in entry.positions.iter() {
+                for pos in &entry.positions {
                     offset += postings_writer.write_gamma(*pos - prev_pos);
                     prev_pos = *pos;
                 }

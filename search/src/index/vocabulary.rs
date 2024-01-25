@@ -1,4 +1,4 @@
-use super::{utils, InMemoryIndex, VOCABULARY_ALPHA_EXTENSION};
+use super::{utils, InMemory, VOCABULARY_ALPHA_EXTENSION};
 use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 use fxhash::FxHashMap;
 
@@ -11,7 +11,7 @@ pub struct Vocabulary {
 }
 
 impl Vocabulary {
-    pub fn write_vocabulary(index: &InMemoryIndex, output_path: &str) {
+    pub fn write_vocabulary(index: &InMemory, output_path: &str) {
         let path = output_path.to_string() + VOCABULARY_ALPHA_EXTENSION;
         let mut writer = BitsWriter::new(&path);
 
@@ -22,14 +22,14 @@ impl Vocabulary {
         // write all terms with prefix compression
         let mut prev = "";
 
-        vocab.keys().for_each(|s| {
+        for s in vocab.keys() {
             let p_len = utils::get_matching_prefix_len(prev, s);
             writer.write_gamma(p_len as u32);
             let remaining: String = s.chars().skip(p_len).collect();
             prev = s;
 
             writer.write_str(&remaining);
-        });
+        }
 
         // write all collection frequencies
         index.postings.iter().for_each(|p| {
@@ -46,7 +46,7 @@ impl Vocabulary {
         let num_terms: u32 = reader.read_vbyte();
 
         // read prefix compressed terms
-        let mut prev = "".to_string();
+        let mut prev = String::new();
 
         let mut index_to_term = Vec::new();
 
@@ -95,7 +95,7 @@ impl Vocabulary {
     }
 
     pub fn get_term_index(&self, term: &str) -> Option<usize> {
-        self.term_to_index.get(term).map(|i| *i)
+        self.term_to_index.get(term).copied()
     }
 
     #[allow(dead_code)]
@@ -109,12 +109,12 @@ impl Vocabulary {
     fn get_closest_index(&self, term: &str) -> Option<usize> {
         let candidates = (0..term.len() - 2)
             .map(|i| term[i..i + 3].to_string())
-            .flat_map(|t| self.trigram_index.get(&t))
-            .flat_map(|v| v.into_iter());
+            .filter_map(|t| self.trigram_index.get(&t))
+            .flat_map(|v| v.iter());
 
         candidates
             .min_by_key(|i| Self::distance(term, &self.index_to_term[**i]))
-            .map(|i| *i)
+            .copied()
     }
 
     #[allow(unused_variables)]
@@ -139,19 +139,20 @@ mod tests {
         map.insert("hello".to_string(), 0);
         map.insert("world".to_string(), 0);
 
-        let mut postings = Vec::new();
-        postings.push(PostingList {
-            collection_frequency: 1,
-            documents: Vec::new(),
-        });
-        postings.push(PostingList {
-            collection_frequency: 2,
-            documents: Vec::new(),
-        });
+        let postings = vec![
+            PostingList {
+                collection_frequency: 1,
+                documents: Vec::new(),
+            },
+            PostingList {
+                collection_frequency: 2,
+                documents: Vec::new(),
+            },
+        ];
 
-        let index = InMemoryIndex {
+        let index = InMemory {
             term_index_map: map,
-            postings: postings,
+            postings,
             documents: Vec::new(),
         };
 

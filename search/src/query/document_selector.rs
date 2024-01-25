@@ -3,7 +3,7 @@ use std::{cmp::Ordering, collections::BinaryHeap};
 #[derive(Debug)]
 pub struct Entry {
     pub id: u32,
-    pub score: f32,
+    pub score: f64,
 }
 
 impl PartialEq for Entry {
@@ -39,7 +39,7 @@ impl DocumentSelector {
         }
     }
 
-    pub fn push(&mut self, id: u32, score: f32) {
+    pub fn push(&mut self, id: u32, score: f64) {
         self.heap.push(Entry { id, score });
 
         if self.heap.len() > self.capacity {
@@ -48,7 +48,7 @@ impl DocumentSelector {
     }
 
     pub fn get_sorted_entries(&mut self) -> Vec<Entry> {
-        let mut res: Vec<Entry> = (0..self.capacity).flat_map(|_| self.heap.pop()).collect();
+        let mut res: Vec<Entry> = (0..self.capacity).filter_map(|_| self.heap.pop()).collect();
         res.reverse();
         res
     }

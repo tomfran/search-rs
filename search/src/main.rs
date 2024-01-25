@@ -1,6 +1,6 @@
 use indicatif::HumanDuration;
 use search::index::Index;
-use search::query::{QueryProcessor, QueryResult};
+use search::query::{Processor, Result};
 use std::cmp::min;
 use std::env;
 use std::io::{self, Write};
@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 const NUM_TOP_RESULTS: usize = 10;
 const NUM_RESULTS: usize = 1_000_000;
 
-fn print_results(result: QueryResult) {
+fn print_results(result: &Result) {
     println!("Search tokens: {:?}", result.tokens);
 
     if result.documents.is_empty() {
@@ -35,7 +35,7 @@ fn print_results(result: QueryResult) {
 }
 
 fn read_line(prompt: &str) -> String {
-    print!("{}", prompt);
+    print!("{prompt}");
     io::stdout().flush().unwrap();
 
     let mut input = String::new();
@@ -66,16 +66,16 @@ fn main() {
     let action = &args[2];
     let build_index = action == "build";
 
-    let index_path = format!("{}/index/idx", base_path);
-    let docs_path = format!("{}/docs", base_path);
+    let index_path = format!("{base_path}/index/idx");
+    let docs_path = format!("{base_path}/docs");
 
     if build_index {
-        println!("Start build on directory [{}]\n", docs_path);
+        println!("Start build on directory [{docs_path}]\n");
 
         let num_threads = args.get(3).map_or(0, |s| s.parse().unwrap_or(0));
 
         if num_threads != 0 {
-            println!("Setting thread number to {}", num_threads);
+            println!("Setting thread number to {num_threads}");
 
             rayon::ThreadPoolBuilder::new()
                 .num_threads(num_threads)
@@ -96,11 +96,10 @@ fn main() {
         exit(0);
     }
 
-    let mut q = QueryProcessor::build_query_processor(&index_path);
+    let mut q = Processor::build_query_processor(&index_path);
 
     println!(
-        "Loaded search engine for directory: [{}]\n\nWrite a query and press enter.\n",
-        base_path
+        "Loaded search engine for directory: [{base_path}]\n\nWrite a query and press enter.\n"
     );
 
     loop {
@@ -108,6 +107,6 @@ fn main() {
 
         let result = q.query(&query, NUM_RESULTS);
 
-        print_results(result);
+        print_results(&result);
     }
 }

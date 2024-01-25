@@ -15,7 +15,7 @@ impl Documents {
     pub fn load_documents(input_path: &str) -> Documents {
         let mut reader = BitsReader::new(&(input_path.to_string() + DOCUMENTS_EXTENSION));
 
-        let mut prev: String = "".to_string();
+        let mut prev = String::new();
         let docs = (0..reader.read_vbyte())
             .map(|_| {
                 let p_len = reader.read_gamma();
@@ -40,7 +40,7 @@ impl Documents {
         let mut prev = "";
 
         writer.write_vbyte(documents.len() as u32);
-        documents.iter().for_each(|l| {
+        for l in documents.iter() {
             let p_len = utils::get_matching_prefix_len(prev, &l.path);
             writer.write_gamma(p_len as u32);
             let remaining: String = l.path.chars().skip(p_len).collect();
@@ -48,7 +48,7 @@ impl Documents {
 
             writer.write_str(&remaining);
             writer.write_vbyte(l.lenght);
-        });
+        }
 
         writer.flush();
     }
@@ -92,9 +92,9 @@ mod tests {
 
         assert_eq!(loaded_documents.get_num_documents(), documents.len() as u32);
 
-        for i in 0..documents.len() {
-            assert_eq!(loaded_documents.get_doc_path(i as u32), documents[i].path);
-            assert_eq!(loaded_documents.get_doc_len(i as u32), documents[i].lenght);
+        for (i, d) in documents.iter().enumerate() {
+            assert_eq!(loaded_documents.get_doc_path(i as u32), d.path);
+            assert_eq!(loaded_documents.get_doc_len(i as u32), d.lenght);
         }
     }
 
@@ -117,9 +117,9 @@ mod tests {
 
         assert_eq!(doc_collection.get_num_documents(), documents.len() as u32);
 
-        for i in 0..documents.len() {
-            assert_eq!(doc_collection.get_doc_path(i as u32), documents[i].path);
-            assert_eq!(doc_collection.get_doc_len(i as u32), documents[i].lenght);
+        for (i, d) in documents.iter().enumerate() {
+            assert_eq!(doc_collection.get_doc_path(i as u32), d.path);
+            assert_eq!(doc_collection.get_doc_len(i as u32), d.lenght);
         }
     }
 }

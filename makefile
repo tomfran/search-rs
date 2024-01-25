@@ -6,3 +6,9 @@ cli:
 
 test:
 	cargo test --release
+
+clippy: 
+	cargo clippy
+
+clippy-pedantic:
+	cargo clippy -- -W clippy::pedantic
