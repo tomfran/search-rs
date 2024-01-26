@@ -5,11 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- htmx -->
     <script src="https://unpkg.com/htmx.org@1.9.9"></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
-
-    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,6 +39,24 @@
                 });
             });
         });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var goToTopBtn = document.getElementById('to-top');
+
+            // Show/hide the "Go to Top" button based on scroll position
+            window.addEventListener('scroll', function () {
+                if (window.scrollY > 500) {
+                    goToTopBtn.classList.remove('hidden');
+                } else {
+                    goToTopBtn.classList.add('hidden');
+                }
+            });
+
+            // Scroll to the top when the button is clicked
+            goToTopBtn.addEventListener('click', function () {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
     </script>
 
     <title>search-rs</title>
@@ -68,7 +83,7 @@
             <h1 class="text-3xl font-medium mb-10">Index on {{index_path}}</h1>
             <input type="text"
                 class="outline-neutral-300 dark:outline-neutral-900 w-full p-4 rounded-md bg-neutral-100 dark:bg-neutral-800"
-                placeholder="Enter your search query..." autofocus name="query" hx-post="/query" hx-ext='json-enc'
+                placeholder="Enter your search query..." autofocus name="query" hx-post="/query"
                 hx-target=".search-results" hx-trigger="keyup[keyCode==13]">
         </div>
 
@@ -76,6 +91,11 @@
         <div class="search-results" hx-target=".search-results">
 
         </div>
+    </div>
+
+    <div id="to-top"
+        class="hidden fixed flex bottom-16 right-16 h-16 w-16 rounded-full justify-center items-center hover:cursor-pointer bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 ">
+        <i class="fas fa-caret-up text-2xl"></i>
     </div>
 
 </body>

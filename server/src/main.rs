@@ -1,11 +1,11 @@
 use askama::Template;
 use axum::{
     debug_handler,
-    extract::{Json, State},
+    extract::State,
     http::StatusCode,
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Router,
+    Form, Router,
 };
 use log::info;
 use search::query::Processor;
@@ -115,7 +115,7 @@ struct Document {
 #[debug_handler]
 async fn post_query(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<QueryRequest>,
+    Form(payload): Form<QueryRequest>,
 ) -> impl IntoResponse {
     info!("Query request: {}", payload.query);
 

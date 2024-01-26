@@ -23,7 +23,8 @@
     {% for doc in documents %}
 
 
-    <div id="{{doc.path}}" class="toggle-container bg-neutral-100 dark:bg-neutral-800 p-6 rounded-md mb-6">
+    <div id="{{doc.path}}"
+        class="toggle-container hover:cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 hover:dark:bg-neutral-700 p-6 rounded-md mb-6">
         <div id="{{doc.path}}_closed">
             <h2 class="text-xl font-semibold mb-4">
                 {{ doc.path }}
