@@ -40,7 +40,7 @@ impl Documents {
         let mut prev = "";
 
         writer.write_vbyte(documents.len() as u32);
-        for l in documents.iter() {
+        for l in documents {
             let p_len = utils::get_matching_prefix_len(prev, &l.path);
             writer.write_gamma(p_len as u32);
             let remaining: String = l.path.chars().skip(p_len).collect();

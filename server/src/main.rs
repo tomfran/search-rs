@@ -13,12 +13,15 @@ use serde::{Deserialize, Serialize};
 use std::{
     env,
     fs::read_to_string,
+    mem::replace,
     sync::{Arc, Mutex},
 };
 
 struct AppState {
     index_path: String,
     query_processor: Mutex<Processor>,
+    cached_query: Mutex<String>,
+    cached_result: Mutex<Option<QueryResponse>>,
 }
 
 #[tokio::main]
@@ -40,6 +43,8 @@ async fn main() {
     let state = Arc::new(AppState {
         index_path: base_path.clone(),
         query_processor: Mutex::new(Processor::build_query_processor(&index_path)),
+        cached_query: Mutex::new(String::new()),
+        cached_result: Mutex::new(None),
     });
 
     let app = Router::new()
@@ -91,7 +96,7 @@ struct QueryRequest {
     query: String,
 }
 
-#[derive(Template)]
+#[derive(Template, Clone)]
 #[template(path = "query.html")]
 struct QueryResponse {
     tokens: Vec<String>,
@@ -99,7 +104,7 @@ struct QueryResponse {
     documents: Vec<Document>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 struct Document {
     id: u32,
     score: f64,
@@ -112,7 +117,15 @@ async fn post_query(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<QueryRequest>,
 ) -> impl IntoResponse {
-    info!("Query request: {:?}", payload);
+    info!("Query request: {}", payload.query);
+
+    let mut cq = state.cached_query.lock().unwrap();
+    let mut cqr = state.cached_result.lock().unwrap();
+
+    if *cq == payload.query {
+        info!("Cache hit for query: {}", payload.query);
+        return HtmlTemplate(cqr.clone().unwrap());
+    }
 
     let mut q = state.query_processor.lock().unwrap();
 
@@ -129,11 +142,17 @@ async fn post_query(
         })
         .collect();
 
-    HtmlTemplate(QueryResponse {
+    let response = QueryResponse {
         tokens: query_result.tokens,
         documents,
         time_ms: query_result.time_ms,
-    })
+    };
+
+    info!("Replacing cache with query: {}", payload.query);
+    let _ = replace(&mut *cq, payload.query);
+    let _ = replace(&mut *cqr, Some(response.clone()));
+
+    HtmlTemplate(response)
 }
 
 fn read_file_content(path: String) -> String {

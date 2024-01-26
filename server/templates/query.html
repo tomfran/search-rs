@@ -22,13 +22,21 @@
 
     {% for doc in documents %}
 
-    <div>
-        <div class="bg-neutral-800 p-6 rounded-md shadow-md mb-6">
+
+    <div id="{{doc.path}}" class="toggle-container">
+        <div id="{{doc.path}}_closed" class="bg-neutral-800 p-6 rounded-md shadow-md mb-6">
             <h2 class="text-xl font-semibold mb-4">
                 {{ doc.path }}
             </h2>
             <p class="text-neutral-300">
-                <!-- {{ doc.content|truncate(300) }} -->
+                {{ doc.content|truncate(150) }}
+            </p>
+        </div>
+        <div id="{{doc.path}}_open" class="bg-neutral-800 p-6 rounded-md shadow-md mb-6" style="display:none;">
+            <h2 class="text-xl font-semibold mb-4">
+                {{ doc.path }}
+            </h2>
+            <p class="text-neutral-300">
                 {{ doc.content }}
             </p>
         </div>

@@ -23,6 +23,27 @@
         }
     </style>
 
+    <script>
+        document.addEventListener('htmx:afterSwap', function () {
+            var containers = document.querySelectorAll('.toggle-container');
+            containers.forEach(function (container) {
+                container.addEventListener('click', function (event) {
+                    var containedId = container.id.replace('_open', '').replace('_closed', '');  // Extract the base ID
+                    var op = document.getElementById(containedId + '_open');
+                    var cl = document.getElementById(containedId + '_closed');
+
+                    if (op.style.display !== "none") {
+                        op.style.display = "none";
+                        cl.style.display = "block";
+                    } else {
+                        op.style.display = "block";
+                        cl.style.display = "none";
+                    }
+                });
+            });
+        });
+    </script>
+
     <title>search-rs</title>
 </head>
 
