@@ -43,7 +43,7 @@ impl Index {
         }
     }
 
-    pub fn get_term_postings(&mut self, term: &str) -> Option<postings::PostingList> {
+    pub fn get_term_postings(&mut self, term: &str) -> Option<PostingList> {
         self.vocabulary
             .get_term_index(term)
             .map(|i| self.postings.load_postings_list(i))
@@ -63,6 +63,10 @@ impl Index {
 
     pub fn get_document_path(&self, doc_id: u32) -> String {
         self.documents.get_doc_path(doc_id)
+    }
+
+    pub fn spellcheck_term(&self, term: &str) -> Option<String> {
+        self.vocabulary.spellcheck_term(term)
     }
 }
 

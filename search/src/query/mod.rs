@@ -45,8 +45,15 @@ impl Processor {
     pub fn query(&mut self, query: &str, num_results: usize) -> Result {
         let start_time = Instant::now();
 
-        let tokens = self.index.get_query_tokens(query);
+        // spellcheck phase
+        let tokens: Vec<String> = self
+            .index
+            .get_query_tokens(query)
+            .iter()
+            .filter_map(|t| self.index.spellcheck_term(t))
+            .collect();
 
+        // retrieve documents
         let documents = self
             .get_sorted_document_entries(&tokens.clone(), num_results)
             .iter()
@@ -97,7 +104,7 @@ impl Processor {
 
         let mut selector = DocumentSelector::new(num_results);
         let num_tokens = tokens.len();
-        for (id, score) in scores.iter_mut() {
+        for (id, score) in &mut scores {
             // tf-idf score must be divided by the document len
             score.tf_idf /= self.index.get_document_len(*id) as f64;
             selector.push(*id, Processor::compute_score(score, num_tokens));

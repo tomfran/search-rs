@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 use super::{utils, InMemory, VOCABULARY_ALPHA_EXTENSION};
 use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 use fxhash::FxHashMap;
@@ -98,13 +100,14 @@ impl Vocabulary {
         self.term_to_index.get(term).copied()
     }
 
-    #[allow(dead_code)]
-
-    pub fn get_term_index_spellcheck(&self, term: &str) -> Option<usize> {
-        self.get_term_index(term)
-            .or_else(|| self.get_closest_index(term))
+    pub fn spellcheck_term(&self, term: &str) -> Option<String> {
+        if self.term_to_index.contains_key(term) {
+            Some(term.to_string())
+        } else {
+            self.get_closest_index(term)
+                .and_then(|i| self.index_to_term.get(i).cloned())
+        }
     }
-    #[allow(dead_code)]
 
     fn get_closest_index(&self, term: &str) -> Option<usize> {
         let candidates = (0..term.len() - 2)
@@ -112,14 +115,47 @@ impl Vocabulary {
             .filter_map(|t| self.trigram_index.get(&t))
             .flat_map(|v| v.iter());
 
+        // find lowest levenshtein distance with maximum frequency
         candidates
-            .min_by_key(|i| Self::distance(term, &self.index_to_term[**i]))
+            .min_by_key(|i| {
+                (
+                    Self::levenshtein_distance(term, &self.index_to_term[**i]),
+                    -(self.frequencies[**i] as i32),
+                )
+            })
             .copied()
     }
 
-    #[allow(unused_variables)]
-    fn distance(s1: &str, s2: &str) -> u32 {
-        todo!()
+    fn levenshtein_distance(s1: &str, s2: &str) -> usize {
+        if s1.len() > s2.len() {
+            return Self::levenshtein_distance(s2, s1);
+        }
+
+        let n = s1.len() + 1;
+        let m = s2.len() + 1;
+
+        if n == 0 {
+            return m;
+        }
+
+        let mut dp = vec![vec![0; m]; n];
+
+        for i in 0..m {
+            dp[0][i] = i;
+        }
+
+        for (i, c1) in s1.chars().enumerate() {
+            dp[i][0] = i;
+            for (j, c2) in s2.chars().enumerate() {
+                if c1 == c2 {
+                    dp[i + 1][j + 1] = dp[i][j];
+                } else {
+                    dp[i + 1][j + 1] = 1 + min(dp[i][j], min(dp[i + 1][j], dp[i][j + 1]));
+                }
+            }
+        }
+
+        dp[n - 1][m - 1]
     }
 }
 
@@ -165,5 +201,18 @@ mod tests {
         assert_eq!(*loaded_vocabulary.trigram_index.get("hel").unwrap(), [0]);
         assert_eq!(*loaded_vocabulary.trigram_index.get("ell").unwrap(), [0]);
         assert_eq!(*loaded_vocabulary.trigram_index.get("rld").unwrap(), [1]);
+
+        assert_eq!(loaded_vocabulary.spellcheck_term("hell").unwrap(), "hello");
+        assert_eq!(loaded_vocabulary.spellcheck_term("wrld").unwrap(), "world");
+        assert_eq!(loaded_vocabulary.spellcheck_term("he"), None);
+    }
+
+    #[test]
+    fn test_levenshtein_distance() {
+        assert_eq!(Vocabulary::levenshtein_distance("hello", "hello"), 0);
+        assert_eq!(Vocabulary::levenshtein_distance("hello", ""), 5);
+        assert_eq!(Vocabulary::levenshtein_distance("", ""), 0);
+        assert_eq!(Vocabulary::levenshtein_distance("cat", "cats"), 1);
+        assert_eq!(Vocabulary::levenshtein_distance("abc", "xyz"), 3);
     }
 }
