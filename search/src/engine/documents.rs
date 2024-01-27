@@ -4,11 +4,12 @@ use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 #[derive(Clone)]
 pub struct Document {
     pub path: String,
-    pub lenght: u32,
+    pub length: u32,
 }
 
 pub struct Documents {
     docs: Vec<Document>,
+    avg_len: f64,
 }
 
 impl Documents {
@@ -16,21 +17,26 @@ impl Documents {
         let mut reader = BitsReader::new(&(input_path.to_string() + DOCUMENTS_EXTENSION));
 
         let mut prev = String::new();
-        let docs = (0..reader.read_vbyte())
+
+        let mut length_sum = 0;
+
+        let docs: Vec<Document> = (0..reader.read_vbyte())
             .map(|_| {
                 let p_len = reader.read_gamma();
                 let prefix: String = prev.chars().take(p_len as usize).collect();
-                let s = prefix + &reader.read_str();
-                prev = s.clone();
+                let path = prefix + &reader.read_str();
+                prev = path.clone();
 
-                Document {
-                    path: s,
-                    lenght: reader.read_vbyte(),
-                }
+                let length = reader.read_vbyte();
+                length_sum += length;
+
+                Document { path, length }
             })
             .collect();
 
-        Documents { docs }
+        let avg_len = length_sum as f64 / docs.len() as f64;
+
+        Documents { docs, avg_len }
     }
 
     pub fn write_documents(documents: &Vec<Document>, output_path: &str) {
@@ -47,7 +53,7 @@ impl Documents {
             prev = &l.path;
 
             writer.write_str(&remaining);
-            writer.write_vbyte(l.lenght);
+            writer.write_vbyte(l.length);
         }
 
         writer.flush();
@@ -58,7 +64,11 @@ impl Documents {
     }
 
     pub fn get_doc_len(&self, doc_id: u32) -> u32 {
-        self.docs[doc_id as usize].lenght
+        self.docs[doc_id as usize].length
+    }
+
+    pub fn get_avg_doc_len(&self) -> f64 {
+        self.avg_len
     }
 
     pub fn get_doc_path(&self, doc_id: u32) -> String {
@@ -79,11 +89,11 @@ mod tests {
         let documents = vec![
             Document {
                 path: "document1.txt".to_string(),
-                lenght: 100,
+                length: 100,
             },
             Document {
                 path: "document2.txt".to_string(),
-                lenght: 150,
+                length: 150,
             },
         ];
 
@@ -94,7 +104,7 @@ mod tests {
 
         for (i, d) in documents.iter().enumerate() {
             assert_eq!(loaded_documents.get_doc_path(i as u32), d.path);
-            assert_eq!(loaded_documents.get_doc_len(i as u32), d.lenght);
+            assert_eq!(loaded_documents.get_doc_len(i as u32), d.length);
         }
     }
 
@@ -103,23 +113,24 @@ mod tests {
         let documents = vec![
             Document {
                 path: "document1.txt".to_string(),
-                lenght: 100,
+                length: 100,
             },
             Document {
                 path: "document2.txt".to_string(),
-                lenght: 150,
+                length: 150,
             },
         ];
 
         let doc_collection = Documents {
             docs: documents.clone(),
+            avg_len: 125.0,
         };
 
         assert_eq!(doc_collection.get_num_documents(), documents.len() as u32);
 
         for (i, d) in documents.iter().enumerate() {
             assert_eq!(doc_collection.get_doc_path(i as u32), d.path);
-            assert_eq!(doc_collection.get_doc_len(i as u32), d.lenght);
+            assert_eq!(doc_collection.get_doc_len(i as u32), d.length);
         }
     }
 }

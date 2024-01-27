@@ -8,20 +8,22 @@ use axum::{
     Form, Router,
 };
 use log::info;
-use search::query::Processor;
+use lru::LruCache;
+use search::engine::Engine;
 use serde::{Deserialize, Serialize};
 use std::{
     env,
     fs::read_to_string,
-    mem::replace,
+    num::NonZeroUsize,
     sync::{Arc, Mutex},
 };
 
+const CACHE_SIZE: usize = 10;
+
 struct AppState {
     index_path: String,
-    query_processor: Mutex<Processor>,
-    cached_query: Mutex<String>,
-    cached_result: Mutex<Option<QueryResponse>>,
+    engine: Mutex<Engine>,
+    query_cache: Mutex<LruCache<String, QueryResponse>>,
 }
 
 #[tokio::main]
@@ -42,9 +44,8 @@ async fn main() {
 
     let state = Arc::new(AppState {
         index_path: base_path.clone(),
-        query_processor: Mutex::new(Processor::build_query_processor(&index_path)),
-        cached_query: Mutex::new(String::new()),
-        cached_result: Mutex::new(None),
+        engine: Mutex::new(Engine::load_index(&index_path)),
+        query_cache: Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap())),
     });
 
     let app = Router::new()
@@ -119,17 +120,16 @@ async fn post_query(
 ) -> impl IntoResponse {
     info!("Query request: {}", payload.query);
 
-    let mut cq = state.cached_query.lock().unwrap();
-    let mut cqr = state.cached_result.lock().unwrap();
+    let mut query_cache = state.query_cache.lock().unwrap();
 
-    if *cq == payload.query {
+    if let Some(cached_result) = query_cache.get(&payload.query) {
         info!("Cache hit for query: {}", payload.query);
-        return HtmlTemplate(cqr.clone().unwrap());
+        return HtmlTemplate(cached_result.clone());
     }
 
-    let mut q = state.query_processor.lock().unwrap();
+    let mut engine = state.engine.lock().unwrap();
 
-    let query_result = q.query(&payload.query, 100);
+    let query_result = engine.query(&payload.query, 100);
 
     let documents = query_result
         .documents
@@ -148,9 +148,8 @@ async fn post_query(
         time_ms: query_result.time_ms,
     };
 
-    info!("Replacing cache with query: {}", payload.query);
-    let _ = replace(&mut *cq, payload.query);
-    let _ = replace(&mut *cqr, Some(response.clone()));
+    info!("Caching query: {}", payload.query);
+    query_cache.put(payload.query.clone(), response.clone());
 
     HtmlTemplate(response)
 }

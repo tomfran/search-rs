@@ -16,10 +16,10 @@ Search engine written in Rust, based on an inverted index on disk.
 **Index construction**
 - [x] In-memory datasets index construction;
 - [x] Proper vocabulary and paths on disk;
-- [ ] Spelling correction index: in progress.
+- [x] Spelling correction index;.
 
 **Queries**
-- [x] Tf-idf ranked retrieval;
+- [x] BM25 scoring;
 - [x] Window computation;
 
 **Evaluation**

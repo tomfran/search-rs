@@ -19,7 +19,7 @@ const PROGRESS_CHARS: &str = "=> ";
 
 const CUTOFF_THRESHOLD: f64 = 0.8;
 
-pub fn build_index(input_dir: &str, output_path: &str, preprocessor: &Preprocessor) {
+pub fn build_engine(input_dir: &str, output_path: &str, preprocessor: &Preprocessor) {
     let index: InMemory = build_in_memory(input_dir, preprocessor);
     Postings::write_postings(&index, output_path);
     Vocabulary::write_vocabulary(&index, output_path);
@@ -59,7 +59,7 @@ fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemory {
             // update documents array
             documents.lock().unwrap().push(Document {
                 path: d.path().to_str().unwrap().to_string(),
-                lenght: tokens.len() as u32,
+                length: tokens.len() as u32,
             });
 
             let mut l_term_index_map = term_index_map.lock().unwrap();

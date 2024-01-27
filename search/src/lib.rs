@@ -1,4 +1,3 @@
 pub mod disk;
-pub mod index;
-pub mod query;
+pub mod engine;
 mod test_utils;

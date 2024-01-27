@@ -1,6 +1,5 @@
 use indicatif::HumanDuration;
-use search::index::Index;
-use search::query::{Processor, Result};
+use search::engine::{Engine, QueryResult};
 use std::cmp::min;
 use std::env;
 use std::io::{self, Write};
@@ -10,7 +9,7 @@ use std::time::{Duration, Instant};
 const NUM_TOP_RESULTS: usize = 10;
 const NUM_RESULTS: usize = 1_000_000;
 
-fn print_results(result: &Result) {
+fn print_results(result: &QueryResult) {
     println!("Search tokens: {:?}", result.tokens);
 
     if result.documents.is_empty() {
@@ -85,7 +84,7 @@ fn main() {
 
         let start_time = Instant::now();
 
-        Index::build_index(&docs_path, &index_path);
+        Engine::build_engine(&docs_path, &index_path);
         let elapsed_time = start_time.elapsed();
         println!(
             "Index built in {}.\n\nLoad options:\n- CLI: cargo run --release --bin search {} load",
@@ -96,7 +95,7 @@ fn main() {
         exit(0);
     }
 
-    let mut q = Processor::build_query_processor(&index_path);
+    let mut e = Engine::load_index(&index_path);
 
     println!(
         "Loaded search engine for directory: [{base_path}]\n\nWrite a query and press enter.\n"
@@ -105,7 +104,7 @@ fn main() {
     loop {
         let query = read_line("> ");
 
-        let result = q.query(&query, NUM_RESULTS);
+        let result = e.query(&query, NUM_RESULTS);
 
         print_results(&result);
     }

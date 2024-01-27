@@ -163,7 +163,7 @@ impl Vocabulary {
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::{index::postings::PostingList, test_utils::utils::create_temporary_file_path};
+    use crate::{engine::postings::PostingList, test_utils::utils::create_temporary_file_path};
 
     use super::*;
 
