@@ -20,7 +20,7 @@ pub const OFFSETS_EXTENSION: &str = ".offsets";
 pub const DOCUMENTS_EXTENSION: &str = ".docs";
 pub const VOCABULARY_ALPHA_EXTENSION: &str = ".alphas";
 
-const WINDOW_SCORE_MULTIPLIER: f64 = 0.5;
+const WINDOW_SCORE_MULTIPLIER: f64 = 0.0;
 const BM25_SCORE_MULTIPLIER: f64 = 1.0;
 
 const BM25_KL: f64 = 1.2;
@@ -58,8 +58,19 @@ struct DocumentScore {
 }
 
 impl Engine {
-    pub fn build_engine(input_path: &str, output_path: &str) {
-        builder::build_engine(input_path, output_path, &Preprocessor::new());
+    pub fn build_engine(
+        input_path: &str,
+        output_path: &str,
+        max_freq_percentage_threshold: f64,
+        min_freq_threshold: u32,
+    ) {
+        builder::build_engine(
+            input_path,
+            output_path,
+            &Preprocessor::new(),
+            max_freq_percentage_threshold,
+            min_freq_threshold,
+        );
     }
 
     pub fn load_index(input_path: &str) -> Engine {
@@ -191,7 +202,7 @@ mod test {
     fn test_build() {
         let index_path = &create_temporary_dir_path();
 
-        Engine::build_engine("test_data/docs", index_path);
+        Engine::build_engine("test_data/docs", index_path, 1.0, 0);
 
         let mut idx = Engine::load_index(index_path);
 

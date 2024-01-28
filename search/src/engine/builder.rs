@@ -17,16 +17,30 @@ const PROGRESS_STYLE: &str =
     "Documents per second: {per_sec:<3}\n\n[{elapsed_precise}] [{bar:50}] {pos}/{len} [{eta_precise}]";
 const PROGRESS_CHARS: &str = "=> ";
 
-const CUTOFF_THRESHOLD: f64 = 0.8;
-
-pub fn build_engine(input_dir: &str, output_path: &str, preprocessor: &Preprocessor) {
-    let index: InMemory = build_in_memory(input_dir, preprocessor);
+pub fn build_engine(
+    input_path: &str,
+    output_path: &str,
+    preprocessor: &Preprocessor,
+    max_freq_percentage_threshold: f64,
+    min_freq_threshold: u32,
+) {
+    let index: InMemory = build_in_memory(
+        input_path,
+        preprocessor,
+        max_freq_percentage_threshold,
+        min_freq_threshold,
+    );
     Postings::write_postings(&index, output_path);
     Vocabulary::write_vocabulary(&index, output_path);
     Documents::write_documents(&index.documents, output_path);
 }
 
-fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemory {
+fn build_in_memory(
+    input_dir: &str,
+    preprocessor: &Preprocessor,
+    max_freq_percentage_threshold: f64,
+    min_freq_threshold: u32,
+) -> InMemory {
     let files: Vec<fs::DirEntry> = fs::read_dir(input_dir)
         .expect("error while retrieving input directory content")
         .map(std::result::Result::unwrap)
@@ -98,13 +112,17 @@ fn build_in_memory(input_dir: &str, preprocessor: &Preprocessor) -> InMemory {
 
     let final_postings = postings.into_inner().unwrap();
 
-    let frequency_threshold = (doc_id_mutex.into_inner().unwrap() as f64 * CUTOFF_THRESHOLD) as u32;
+    let frequency_threshold =
+        (doc_id_mutex.into_inner().unwrap() as f64 * max_freq_percentage_threshold) as u32;
 
     let sorted_term_index_map: BTreeMap<String, usize> = term_index_map
         .into_inner()
         .unwrap()
         .into_iter()
-        .filter(|(_, v)| final_postings[*v].collection_frequency <= frequency_threshold)
+        .filter(|(_, v)| {
+            let f = final_postings[*v].collection_frequency;
+            f <= frequency_threshold && f > min_freq_threshold
+        })
         .collect();
 
     InMemory {

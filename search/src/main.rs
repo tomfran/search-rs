@@ -7,7 +7,7 @@ use std::process::{exit, Command};
 use std::time::{Duration, Instant};
 
 const NUM_TOP_RESULTS: usize = 10;
-const NUM_RESULTS: usize = 1_000_000;
+const NUM_RESULTS: usize = 100;
 
 fn print_results(result: &QueryResult) {
     println!("Search tokens: {:?}", result.tokens);
@@ -57,7 +57,10 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 3 || args.len() > 5 {
-        println!("Usage: cargo run --bin search <base_path> <load_or_build> [build_num_threads]");
+        println!("Usage: cargo run -r <base_path> <load_or_build> <min_freq (integer)> <max_frequency_perc (float)>
+        \nExample:
+        \n\t- cargo run -r path/to/docs build 10 0.90
+        \n\t- cargo run -r path/to/docs load");
         return;
     }
 
@@ -69,27 +72,33 @@ fn main() {
     let docs_path = format!("{base_path}/docs");
 
     if build_index {
+        let min_freq: Result<u32, _> = args[3].parse();
+        let min_freq = match min_freq {
+            Ok(value) => value,
+            Err(_) => {
+                println!("Error: min_freq must be an integer.");
+                return;
+            }
+        };
+
+        let max_frequency_perc: Result<f64, _> = args[4].parse();
+        let max_frequency_perc = match max_frequency_perc {
+            Ok(value) => value,
+            Err(_) => {
+                println!("Error: max_frequency_perc must be a float.");
+                return;
+            }
+        };
+
         println!("Start build on directory [{docs_path}]\n");
 
-        let num_threads = args.get(3).map_or(0, |s| s.parse().unwrap_or(0));
-
-        if num_threads != 0 {
-            println!("Setting thread number to {num_threads}");
-
-            rayon::ThreadPoolBuilder::new()
-                .num_threads(num_threads)
-                .build_global()
-                .unwrap();
-        }
-
         let start_time = Instant::now();
-
-        Engine::build_engine(&docs_path, &index_path);
+        Engine::build_engine(&docs_path, &index_path, max_frequency_perc, min_freq);
         let elapsed_time = start_time.elapsed();
+
         println!(
-            "Index built in {}.\n\nLoad options:\n- CLI: cargo run --release --bin search {} load",
-            HumanDuration(Duration::from_secs(elapsed_time.as_secs())),
-            base_path
+            "Index built in {}",
+            HumanDuration(Duration::from_secs(elapsed_time.as_secs()))
         );
 
         exit(0);
