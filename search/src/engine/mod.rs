@@ -8,7 +8,7 @@ mod vocabulary;
 
 use self::documents::{Document, Documents};
 use self::heap::FixedMinHeap;
-use self::postings::{PostingList, Postings};
+use self::postings::{DocumentIdsList, Postings, PostingsList};
 use self::preprocessor::Preprocessor;
 use self::vocabulary::Vocabulary;
 use std::cmp::min;
@@ -35,17 +35,23 @@ pub struct Engine {
 
 pub struct InMemory {
     term_index_map: BTreeMap<String, usize>,
-    postings: Vec<PostingList>,
+    postings: Vec<PostingsList>,
     documents: Vec<Document>,
 }
 
-pub struct QueryResult {
-    pub tokens: Vec<String>,
-    pub documents: Vec<DocumentResult>,
+pub struct BooleanQueryResult {
+    pub postfix_query: Vec<String>,
+    pub documents_ids: DocumentIdsList,
     pub time_ms: u128,
 }
 
-pub struct DocumentResult {
+pub struct RankedQueryResult {
+    pub tokens: Vec<String>,
+    pub documents: Vec<RankedDocumentResult>,
+    pub time_ms: u128,
+}
+
+pub struct RankedDocumentResult {
     pub id: u32,
     pub path: String,
     pub score: f64,
@@ -82,7 +88,48 @@ impl Engine {
         }
     }
 
-    pub fn query(&mut self, query: &str, num_results: usize) -> QueryResult {
+    pub fn boolean_query(&mut self, postfix_expression: Vec<&str>) -> BooleanQueryResult {
+        let start_time = Instant::now();
+
+        let mut stack = Vec::new();
+        let mut intermediate_result;
+        let num_docs = self.documents.get_num_documents();
+
+        for p in postfix_expression.clone() {
+            match p {
+                "AND" => {
+                    intermediate_result =
+                        Postings::and_operator(stack.pop().unwrap(), stack.pop().unwrap());
+                }
+                "OR" => {
+                    intermediate_result =
+                        Postings::or_operator(stack.pop().unwrap(), stack.pop().unwrap());
+                }
+                "NOT" => {
+                    intermediate_result = Postings::not_operator(stack.pop().unwrap(), num_docs);
+                }
+                _ => {
+                    intermediate_result = self
+                        .vocabulary
+                        .spellcheck_term(p)
+                        .and_then(|t| self.get_term_doc_ids(&t))
+                        .unwrap_or_default();
+                }
+            }
+
+            stack.push(intermediate_result);
+        }
+
+        let time_ms = start_time.elapsed().as_millis();
+
+        BooleanQueryResult {
+            postfix_query: postfix_expression.iter().map(|s| s.to_string()).collect(),
+            documents_ids: stack.pop().unwrap(),
+            time_ms,
+        }
+    }
+
+    pub fn free_query(&mut self, query: &str, num_results: usize) -> RankedQueryResult {
         let start_time = Instant::now();
 
         let tokens: Vec<String> = self
@@ -102,10 +149,10 @@ impl Engine {
                 // compute idf where n is the number of documents and
                 // nq the number of documents containing query term
 
-                let nq = postings.collection_frequency as f64;
+                let nq = self.vocabulary.get_term_frequency(token).unwrap() as f64;
                 let idf = ((n - nq + 0.5) / (nq + 0.5) + 1.0).ln();
 
-                for doc_posting in &postings.documents {
+                for doc_posting in &postings {
                     // compute B25 score, where fq is the frequency of term in this documents
                     // dl is the document len, and avgdl is the average document len accross the collection
 
@@ -137,7 +184,7 @@ impl Engine {
         let documents = selector
             .get_sorted_id_priority_pairs()
             .iter()
-            .map(|(id, score)| DocumentResult {
+            .map(|(id, score)| RankedDocumentResult {
                 id: *id,
                 score: *score,
                 path: self.documents.get_doc_path(*id),
@@ -146,17 +193,23 @@ impl Engine {
 
         let time_ms = start_time.elapsed().as_millis();
 
-        QueryResult {
+        RankedQueryResult {
             tokens,
             documents,
             time_ms,
         }
     }
 
-    fn get_term_postings(&mut self, term: &str) -> Option<PostingList> {
+    fn get_term_postings(&mut self, term: &str) -> Option<PostingsList> {
         self.vocabulary
             .get_term_index(term)
             .map(|i| self.postings.load_postings_list(i))
+    }
+
+    fn get_term_doc_ids(&mut self, term: &str) -> Option<DocumentIdsList> {
+        self.vocabulary
+            .get_term_index(term)
+            .map(|i| self.postings.load_doc_ids_list(i))
     }
 
     fn compute_score(document_score: &DocumentScore, num_tokens: usize) -> f64 {
@@ -211,7 +264,7 @@ mod test {
         }
 
         let mut query: Vec<String> = idx
-            .query("hello", 10)
+            .free_query("hello", 10)
             .documents
             .iter()
             .map(|d| d.path.clone())
@@ -220,5 +273,18 @@ mod test {
         query.sort();
 
         assert_eq!(query, ["test_data/docs/1.txt", "test_data/docs/2.txt"]);
+
+        // println!(
+        //     "{:?}",
+        //     idx.boolean_query(vec!["hello", "man", "OR"]).documents_ids
+        // );
+        // println!(
+        //     "{:?}",
+        //     idx.boolean_query(vec!["hello", "man", "AND"]).documents_ids
+        // );
+        // println!(
+        //     "{:?}",
+        //     idx.boolean_query(vec!["man", "NOT"]).documents_ids[0]
+        // );
     }
 }

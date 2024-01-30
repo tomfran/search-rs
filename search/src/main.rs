@@ -1,5 +1,5 @@
 use indicatif::HumanDuration;
-use search::engine::{Engine, QueryResult};
+use search::engine::{Engine, RankedQueryResult};
 use std::cmp::min;
 use std::env;
 use std::io::{self, Write};
@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 const NUM_TOP_RESULTS: usize = 10;
 const NUM_RESULTS: usize = 100;
 
-fn print_results(result: &QueryResult) {
+fn print_results(result: &RankedQueryResult) {
     println!("Search tokens: {:?}", result.tokens);
 
     if result.documents.is_empty() {
@@ -73,21 +73,15 @@ fn main() {
 
     if build_index {
         let min_freq: Result<u32, _> = args[3].parse();
-        let min_freq = match min_freq {
-            Ok(value) => value,
-            Err(_) => {
-                println!("Error: min_freq must be an integer.");
-                return;
-            }
+        let Ok(min_freq) = min_freq else {
+            println!("Error: min_freq must be an integer.");
+            return;
         };
 
         let max_frequency_perc: Result<f64, _> = args[4].parse();
-        let max_frequency_perc = match max_frequency_perc {
-            Ok(value) => value,
-            Err(_) => {
-                println!("Error: max_frequency_perc must be a float.");
-                return;
-            }
+        let Ok(max_frequency_perc) = max_frequency_perc else {
+            println!("Error: max_frequency_perc must be a float.");
+            return;
         };
 
         println!("Start build on directory [{docs_path}]\n");
@@ -113,7 +107,7 @@ fn main() {
     loop {
         let query = read_line("> ");
 
-        let result = e.query(&query, NUM_RESULTS);
+        let result = e.free_query(&query, NUM_RESULTS);
 
         print_results(&result);
     }

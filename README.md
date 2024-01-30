@@ -19,13 +19,8 @@ Search engine written in Rust, based on an inverted index on disk.
 - [x] Min and max frequency cutoffs.
 
 **Queries**
-- [x] BM25 scoring;
-- [x] Query window
-
-**Evaluation**
-- [ ] Query speed;
-- [ ] Query quality; 
-- [ ] Disk overhead.
+- [x] BM25 scoring and query window; 
+- [ ] Boolean queries: in progress
 
 **Client**
 - [x] CLI;

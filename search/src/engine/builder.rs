@@ -1,6 +1,6 @@
 use super::{
     documents::{Document, Documents},
-    postings::{PostingEntry, PostingList, Postings},
+    postings::{Posting, Postings, PostingsList},
     preprocessor::Preprocessor,
     vocabulary::Vocabulary,
     InMemory,
@@ -49,7 +49,7 @@ fn build_in_memory(
     // document counter
     let doc_id_mutex = Mutex::new(0);
     // postings list
-    let postings: Mutex<Vec<PostingList>> = Mutex::new(Vec::new());
+    let postings: Mutex<Vec<PostingsList>> = Mutex::new(Vec::new());
     // word to postings index
     let term_index_map = Mutex::new(HashMap::new());
     // per-word doc id to posting list index
@@ -85,23 +85,21 @@ fn build_in_memory(
                 if !l_term_index_map.contains_key(t) {
                     let idx = l_term_index_map.len();
                     l_term_index_map.insert(t.clone(), idx);
-                    l_postings.push(PostingList::default());
+                    l_postings.push(PostingsList::new());
                     l_term_doc_map.push(HashMap::new());
                 }
                 let term_index = *l_term_index_map.get(t).unwrap();
 
-                let postings_list = &mut l_postings[term_index];
-                postings_list.collection_frequency += 1;
-
                 // obtain document entry for this word and update it
+                let postings_list = &mut l_postings[term_index];
                 if !l_term_doc_map[term_index].contains_key(&doc_id) {
-                    let idx = postings_list.documents.len();
+                    let idx = postings_list.len();
                     l_term_doc_map[term_index].insert(*doc_id, idx);
-                    postings_list.documents.push(PostingEntry::default());
+                    postings_list.push(Posting::default());
                 }
                 let posting_entry_index = *l_term_doc_map[term_index].get(&doc_id).unwrap();
 
-                let posting_entry = &mut postings_list.documents[posting_entry_index];
+                let posting_entry = &mut postings_list[posting_entry_index];
 
                 posting_entry.document_frequency += 1;
                 posting_entry.document_id = *doc_id;
@@ -120,7 +118,7 @@ fn build_in_memory(
         .unwrap()
         .into_iter()
         .filter(|(_, v)| {
-            let f = final_postings[*v].collection_frequency;
+            let f = final_postings[*v].len() as u32;
             f <= frequency_threshold && f > min_freq_threshold
         })
         .collect();

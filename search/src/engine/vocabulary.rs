@@ -35,7 +35,7 @@ impl Vocabulary {
 
         // write all collection frequencies
         index.postings.iter().for_each(|p| {
-            writer.write_vbyte(p.collection_frequency);
+            writer.write_vbyte(p.len() as u32);
         });
 
         writer.flush();
@@ -109,6 +109,10 @@ impl Vocabulary {
         }
     }
 
+    pub fn get_term_frequency(&self, term: &str) -> Option<u32> {
+        self.term_to_index.get(term).map(|i| self.frequencies[*i])
+    }
+
     fn get_closest_index(&self, term: &str) -> Option<usize> {
         let candidates = (0..term.len() - 2)
             .map(|i| term[i..i + 3].to_string())
@@ -163,7 +167,7 @@ impl Vocabulary {
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::{engine::postings::PostingList, test_utils::utils::create_temporary_file_path};
+    use crate::{engine::postings::Posting, test_utils::utils::create_temporary_file_path};
 
     use super::*;
 
@@ -176,14 +180,8 @@ mod tests {
         map.insert("world".to_string(), 0);
 
         let postings = vec![
-            PostingList {
-                collection_frequency: 1,
-                documents: Vec::new(),
-            },
-            PostingList {
-                collection_frequency: 2,
-                documents: Vec::new(),
-            },
+            vec![Posting::default()],
+            vec![Posting::default(), Posting::default()],
         ];
 
         let index = InMemory {

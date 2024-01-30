@@ -129,7 +129,7 @@ async fn post_query(
 
     let mut engine = state.engine.lock().unwrap();
 
-    let query_result = engine.query(&payload.query, 100);
+    let query_result = engine.free_query(&payload.query, 100);
 
     let documents = query_result
         .documents
