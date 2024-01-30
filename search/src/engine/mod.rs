@@ -11,6 +11,7 @@ use self::heap::FixedMinHeap;
 use self::postings::{DocumentIdsList, Postings, PostingsList};
 use self::preprocessor::Preprocessor;
 use self::vocabulary::Vocabulary;
+use phf::phf_map;
 use std::cmp::min;
 use std::collections::{BTreeMap, HashMap};
 use std::time::Instant;
@@ -26,6 +27,14 @@ const BM25_SCORE_MULTIPLIER: f64 = 1.0;
 const BM25_KL: f64 = 1.2;
 const BM25_B: f64 = 0.75;
 
+static BOOLEAN_PRECEDENCE: phf::Map<&'static str, &u8> = phf_map! {
+    "NOT" => &3,
+    "AND" => &2,
+    "OR" => &1,
+    "(" => &0,
+    ")" => &0,
+};
+
 pub struct Engine {
     vocabulary: Vocabulary,
     postings: Postings,
@@ -39,19 +48,13 @@ pub struct InMemory {
     documents: Vec<Document>,
 }
 
-pub struct BooleanQueryResult {
-    pub postfix_query: Vec<String>,
-    pub documents_ids: DocumentIdsList,
+pub struct QueryResult {
+    pub query: Vec<String>,
+    pub documents: Vec<DocumentResult>,
     pub time_ms: u128,
 }
 
-pub struct RankedQueryResult {
-    pub tokens: Vec<String>,
-    pub documents: Vec<RankedDocumentResult>,
-    pub time_ms: u128,
-}
-
-pub struct RankedDocumentResult {
+pub struct DocumentResult {
     pub id: u32,
     pub path: String,
     pub score: f64,
@@ -88,15 +91,16 @@ impl Engine {
         }
     }
 
-    pub fn boolean_query(&mut self, postfix_expression: Vec<&str>) -> BooleanQueryResult {
+    pub fn boolean_query(&mut self, query: &str) -> QueryResult {
         let start_time = Instant::now();
 
         let mut stack = Vec::new();
         let mut intermediate_result;
         let num_docs = self.documents.get_num_documents();
 
-        for p in postfix_expression.clone() {
-            match p {
+        let query = Self::infix_to_postfix_boolean(query);
+        for p in query.clone() {
+            match p.as_str() {
                 "AND" => {
                     intermediate_result =
                         Postings::and_operator(stack.pop().unwrap(), stack.pop().unwrap());
@@ -111,7 +115,7 @@ impl Engine {
                 _ => {
                     intermediate_result = self
                         .vocabulary
-                        .spellcheck_term(p)
+                        .spellcheck_term(&p)
                         .and_then(|t| self.get_term_doc_ids(&t))
                         .unwrap_or_default();
                 }
@@ -120,16 +124,27 @@ impl Engine {
             stack.push(intermediate_result);
         }
 
+        let documents = stack
+            .pop()
+            .unwrap()
+            .iter()
+            .map(|i| DocumentResult {
+                id: *i,
+                path: self.documents.get_doc_path(*i),
+                score: 1.0,
+            })
+            .collect();
+
         let time_ms = start_time.elapsed().as_millis();
 
-        BooleanQueryResult {
-            postfix_query: postfix_expression.iter().map(|s| s.to_string()).collect(),
-            documents_ids: stack.pop().unwrap(),
+        QueryResult {
+            query,
+            documents,
             time_ms,
         }
     }
 
-    pub fn free_query(&mut self, query: &str, num_results: usize) -> RankedQueryResult {
+    pub fn free_query(&mut self, query: &str, num_results: usize) -> QueryResult {
         let start_time = Instant::now();
 
         let tokens: Vec<String> = self
@@ -184,7 +199,7 @@ impl Engine {
         let documents = selector
             .get_sorted_id_priority_pairs()
             .iter()
-            .map(|(id, score)| RankedDocumentResult {
+            .map(|(id, score)| DocumentResult {
                 id: *id,
                 score: *score,
                 path: self.documents.get_doc_path(*id),
@@ -193,23 +208,57 @@ impl Engine {
 
         let time_ms = start_time.elapsed().as_millis();
 
-        RankedQueryResult {
-            tokens,
+        QueryResult {
+            query: tokens,
             documents,
             time_ms,
         }
-    }
-
-    fn get_term_postings(&mut self, term: &str) -> Option<PostingsList> {
-        self.vocabulary
-            .get_term_index(term)
-            .map(|i| self.postings.load_postings_list(i))
     }
 
     fn get_term_doc_ids(&mut self, term: &str) -> Option<DocumentIdsList> {
         self.vocabulary
             .get_term_index(term)
             .map(|i| self.postings.load_doc_ids_list(i))
+    }
+
+    fn infix_to_postfix_boolean(query: &str) -> Vec<String> {
+        let mut res = Vec::new();
+        let mut stack = Vec::new();
+
+        let sanitized_query = query.replace('(', " ( ").replace(')', " ) ");
+
+        for t in sanitized_query.split_ascii_whitespace() {
+            if t == "(" {
+                stack.push(t);
+            } else if t == ")" {
+                let mut last = stack.pop().unwrap();
+                while last != "(" {
+                    res.push(last);
+                    last = stack.pop().unwrap();
+                }
+            } else if let Some(current_precedence) = BOOLEAN_PRECEDENCE.get(t) {
+                while !stack.is_empty() {
+                    let last = stack.last().unwrap();
+                    if BOOLEAN_PRECEDENCE.get(last).unwrap() > current_precedence {
+                        res.push(stack.pop().unwrap());
+                    } else {
+                        break;
+                    }
+                }
+                stack.push(t);
+            } else {
+                res.push(t);
+            }
+        }
+
+        stack.iter().rev().for_each(|e| res.push(e));
+        res.iter().map(|s| (*s).to_string()).collect()
+    }
+
+    fn get_term_postings(&mut self, term: &str) -> Option<PostingsList> {
+        self.vocabulary
+            .get_term_index(term)
+            .map(|i| self.postings.load_postings_list(i))
     }
 
     fn compute_score(document_score: &DocumentScore, num_tokens: usize) -> f64 {
@@ -254,37 +303,59 @@ mod test {
     #[test]
     fn test_build() {
         let index_path = &create_temporary_dir_path();
-
         Engine::build_engine("test_data/docs", index_path, 1.0, 0);
-
         let mut idx = Engine::load_index(index_path);
 
         for ele in ["hello", "man", "world"] {
             assert!(idx.vocabulary.get_term_index(ele).is_some());
         }
 
-        let mut query: Vec<String> = idx
+        let mut free_query: Vec<String> = idx
             .free_query("hello", 10)
             .documents
             .iter()
             .map(|d| d.path.clone())
             .collect();
+        free_query.sort();
 
-        query.sort();
+        assert_eq!(free_query, ["test_data/docs/1.txt", "test_data/docs/2.txt"]);
 
-        assert_eq!(query, ["test_data/docs/1.txt", "test_data/docs/2.txt"]);
+        let mut boolean_query: Vec<String> = idx
+            .boolean_query("hello AND NOT world")
+            .documents
+            .iter()
+            .map(|d| d.path.clone())
+            .collect();
+        boolean_query.sort();
 
-        // println!(
-        //     "{:?}",
-        //     idx.boolean_query(vec!["hello", "man", "OR"]).documents_ids
-        // );
-        // println!(
-        //     "{:?}",
-        //     idx.boolean_query(vec!["hello", "man", "AND"]).documents_ids
-        // );
-        // println!(
-        //     "{:?}",
-        //     idx.boolean_query(vec!["man", "NOT"]).documents_ids[0]
-        // );
+        assert_eq!(boolean_query, ["test_data/docs/2.txt"]);
+    }
+
+    #[test]
+    fn test_infix_postfix() {
+        assert_eq!(
+            Engine::infix_to_postfix_boolean("a AND (b OR NOT c)"),
+            ["a", "b", "c", "NOT", "OR", "AND"]
+        );
+
+        assert_eq!(
+            Engine::infix_to_postfix_boolean("a AND b OR NOT c"),
+            ["a", "b", "AND", "c", "NOT", "OR"]
+        );
+
+        assert_eq!(
+            Engine::infix_to_postfix_boolean("NOT (a AND b) OR NOT (c OR d)"),
+            ["a", "b", "AND", "NOT", "c", "d", "OR", "NOT", "OR"]
+        );
+
+        assert_eq!(
+            Engine::infix_to_postfix_boolean("a AND b AND c OR d OR e"),
+            ["a", "b", "c", "AND", "AND", "d", "e", "OR", "OR"]
+        );
+
+        assert_eq!(
+            Engine::infix_to_postfix_boolean("a AND (b OR c)"),
+            ["a", "b", "c", "OR", "AND"]
+        );
     }
 }

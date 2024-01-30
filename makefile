@@ -1,8 +1,8 @@
 web:
-	cargo run --release --bin server $(index_name)
+	cargo run --release --bin server ${folder}
 
 cli:
-	cargo run --release --bin search $(index_name) ${action}
+	cargo run --release --bin search ${folder} ${action} ${min_f} ${max_p}
 
 test:
 	cargo test --release

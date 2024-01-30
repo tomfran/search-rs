@@ -1,5 +1,5 @@
 use indicatif::HumanDuration;
-use search::engine::{Engine, RankedQueryResult};
+use search::engine::{Engine, QueryResult};
 use std::cmp::min;
 use std::env;
 use std::io::{self, Write};
@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 const NUM_TOP_RESULTS: usize = 10;
 const NUM_RESULTS: usize = 100;
 
-fn print_results(result: &RankedQueryResult) {
-    println!("Search tokens: {:?}", result.tokens);
+fn print_results(result: &QueryResult) {
+    println!("Search tokens: {:?}", result.query);
 
     if result.documents.is_empty() {
         println!("\nNo documents found\n");
@@ -107,7 +107,11 @@ fn main() {
     loop {
         let query = read_line("> ");
 
-        let result = e.free_query(&query, NUM_RESULTS);
+        let result = if query.starts_with("b: ") {
+            e.boolean_query(&query.replace("b: ", ""))
+        } else {
+            e.free_query(&query, NUM_RESULTS)
+        };
 
         print_results(&result);
     }

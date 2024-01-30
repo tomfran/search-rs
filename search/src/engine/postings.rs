@@ -241,5 +241,8 @@ mod tests {
 
         let result_empty = Postings::not_operator(vec![], n);
         assert_eq!(result_empty, (1..=n).collect::<Vec<u32>>());
+
+        let result_full = Postings::not_operator(vec![0, 1, 2], 3);
+        assert_eq!(result_full, []);
     }
 }

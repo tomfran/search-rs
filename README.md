@@ -2,29 +2,53 @@
 
 Search engine written in Rust, based on an inverted index on disk.
 
-## Implementation status 
+## Commands
 
-**IO**
-- [x] Classes for writing and reading bit-streams;
-- [x] Proper strings writer and reader.
+**Index a new document collection**
 
-**Text preprocessing** 
-- [x] Tokenization;
-- [x] Stemming;
+```
+make cli folder=path/to/folder action=build min_f=1 max_p=0.99
+```
 
-**Index construction**
-- [x] In-memory datasets index construction;
-- [x] Proper vocabulary and paths on disk;
-- [x] Spelling correction index;
-- [x] Min and max frequency cutoffs.
+The `min_f` param filters terms appearing less that it, while `max_p` filters terms appearing more than 
+in `max_p` percentage of the documents.
 
-**Queries**
-- [x] BM25 scoring and query window; 
-- [ ] Boolean queries: in progress
+The folder param is a path to a folder with the following structure: 
+```
+├── docs
+│   ├── 1.txt
+│   ├── 2.txt
+│   └── 3.txt
+└── index
+    ├── idx.alphas
+    ├── idx.docs
+    ├── idx.offsets
+    └── idx.postings
+```
 
-**Client**
-- [x] CLI;
-- [x] Web interface.
+The index folder will be created after the build command.
+
+**Load a document collection**
+
+You can load a pre-build index by running:
+
+```
+make web folder=path/to/folder
+```
+
+You can then visit `http://0.0.0.0:3000` to find a web interface to enter free text and boolean queries.
+
+![web.png](misc%2Fweb.png)
+
+**Query Syntax**
+
+You can perform Google-like free test queries, results will 
+be ranked via [BM25](https://en.wikipedia.org/wiki/Okapi_BM25) scoring.
+
+You can also specify boolean queries with `"b: "` prefix such as: 
+```
+b: hello AND there OR NOT man
+```
 
 ## References
 [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/information-retrieval-book.html) - Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze

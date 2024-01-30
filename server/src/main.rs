@@ -129,7 +129,11 @@ async fn post_query(
 
     let mut engine = state.engine.lock().unwrap();
 
-    let query_result = engine.free_query(&payload.query, 100);
+    let query_result = if payload.query.starts_with("b: ") {
+        engine.boolean_query(&payload.query.replace("b: ", ""))
+    } else {
+        engine.free_query(&payload.query, 100)
+    };
 
     let documents = query_result
         .documents
@@ -143,7 +147,7 @@ async fn post_query(
         .collect();
 
     let response = QueryResponse {
-        tokens: query_result.tokens,
+        tokens: query_result.query,
         documents,
         time_ms: query_result.time_ms,
     };
