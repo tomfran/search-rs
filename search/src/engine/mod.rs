@@ -99,27 +99,18 @@ impl Engine {
         let num_docs = self.documents.get_num_documents();
 
         let query = Self::infix_to_postfix_boolean(query);
+
         for p in query.clone() {
-            match p.as_str() {
-                "AND" => {
-                    intermediate_result =
-                        Postings::and_operator(stack.pop().unwrap(), stack.pop().unwrap());
-                }
-                "OR" => {
-                    intermediate_result =
-                        Postings::or_operator(stack.pop().unwrap(), stack.pop().unwrap());
-                }
-                "NOT" => {
-                    intermediate_result = Postings::not_operator(stack.pop().unwrap(), num_docs);
-                }
-                _ => {
-                    intermediate_result = self
-                        .vocabulary
-                        .spellcheck_term(&p)
-                        .and_then(|t| self.get_term_doc_ids(&t))
-                        .unwrap_or_default();
-                }
-            }
+            intermediate_result = match p.as_str() {
+                "AND" => Postings::and_operator(stack.pop().unwrap(), stack.pop().unwrap()),
+                "OR" => Postings::or_operator(stack.pop().unwrap(), stack.pop().unwrap()),
+                "NOT" => Postings::not_operator(stack.pop().unwrap(), num_docs),
+                _ => self
+                    .vocabulary
+                    .spellcheck_term(&p)
+                    .and_then(|t| self.get_term_doc_ids(&t))
+                    .unwrap_or_default(),
+            };
 
             stack.push(intermediate_result);
         }
