@@ -21,7 +21,7 @@ pub const OFFSETS_EXTENSION: &str = ".offsets";
 pub const DOCUMENTS_EXTENSION: &str = ".docs";
 pub const VOCABULARY_ALPHA_EXTENSION: &str = ".alphas";
 
-const WINDOW_SCORE_MULTIPLIER: f64 = 0.0;
+const WINDOW_SCORE_MULTIPLIER: f64 = 3.0;
 const BM25_SCORE_MULTIPLIER: f64 = 1.0;
 
 const BM25_KL: f64 = 1.2;
