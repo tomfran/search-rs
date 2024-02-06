@@ -40,7 +40,7 @@ async fn main() {
     }
 
     let base_path = &args[1];
-    let index_path = format!("{base_path}/index/idx");
+    let index_path = format!("{base_path}/.index/idx");
 
     let state = Arc::new(AppState {
         index_path: base_path.clone(),

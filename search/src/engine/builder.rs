@@ -1,3 +1,5 @@
+use crate::disk::file_utils::walk_dir;
+
 use super::{
     documents::{Document, Documents},
     postings::{Posting, Postings, PostingsList},
@@ -41,11 +43,7 @@ fn build_in_memory(
     max_freq_percentage_threshold: f64,
     min_freq_threshold: u32,
 ) -> InMemory {
-    let files: Vec<fs::DirEntry> = fs::read_dir(input_dir)
-        .expect("error while retrieving input directory content")
-        .map(std::result::Result::unwrap)
-        .collect();
-
+    let files = walk_dir(input_dir);
     // document counter
     let doc_id_mutex = Mutex::new(0);
     // postings list
@@ -65,7 +63,8 @@ fn build_in_memory(
                 .progress_chars(PROGRESS_CHARS),
         )
         .for_each(|d| {
-            let file_content = fs::read_to_string(d.path()).expect("error while reading file");
+            let file_content: String =
+                fs::read_to_string(d.path()).expect("error while reading file");
             let tokens = preprocessor.tokenize_and_stem(&file_content);
 
             let mut doc_id = doc_id_mutex.lock().unwrap();

@@ -14,3 +14,4 @@ tempdir = "0.3.7"
 regex = "1"
 argparse = "0.2.2"
 phf = { version = "0.11.2", features = ["macros"] }
+walkdir = "2.4.0"

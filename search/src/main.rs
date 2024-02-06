@@ -68,8 +68,7 @@ fn main() {
     let action = &args[2];
     let build_index = action == "build";
 
-    let index_path = format!("{base_path}/index/idx");
-    let docs_path = format!("{base_path}/docs");
+    let index_path = format!("{base_path}/.index/idx");
 
     if build_index {
         let min_freq: Result<u32, _> = args[3].parse();
@@ -84,10 +83,10 @@ fn main() {
             return;
         };
 
-        println!("Start build on directory [{docs_path}]\n");
+        println!("Start build on directory [{base_path}]\n");
 
         let start_time = Instant::now();
-        Engine::build_engine(&docs_path, &index_path, max_frequency_perc, min_freq);
+        Engine::build_engine(base_path, &index_path, max_frequency_perc, min_freq);
         let elapsed_time = start_time.elapsed();
 
         println!(
