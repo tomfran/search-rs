@@ -90,7 +90,7 @@ fn main() {
         let elapsed_time = start_time.elapsed();
 
         println!(
-            "Index built in {}",
+            "\nIndex built in {}",
             HumanDuration(Duration::from_secs(elapsed_time.as_secs()))
         );
 

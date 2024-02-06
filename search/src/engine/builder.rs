@@ -7,12 +7,12 @@ use super::{
     vocabulary::Vocabulary,
     InMemory,
 };
-use indicatif::{ParallelProgressIterator, ProgressStyle};
+use fxhash::FxHashMap;
+use indicatif::{ParallelProgressIterator, ProgressIterator, ProgressStyle};
 use rayon::prelude::*;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{hash_map::Entry, BTreeMap},
     fs,
-    sync::Mutex,
 };
 
 const PROGRESS_STYLE: &str =
@@ -32,8 +32,11 @@ pub fn build_engine(
         max_freq_percentage_threshold,
         min_freq_threshold,
     );
+    println!("- Writing postings");
     Postings::write_postings(&index, output_path);
+    println!("- Writing vocabulary");
     Vocabulary::write_vocabulary(&index, output_path);
+    println!("- Writing documents");
     Documents::write_documents(&index.documents, output_path);
 }
 
@@ -43,88 +46,90 @@ fn build_in_memory(
     max_freq_percentage_threshold: f64,
     min_freq_threshold: u32,
 ) -> InMemory {
+    let iterator_style = ProgressStyle::with_template(PROGRESS_STYLE)
+        .unwrap()
+        .progress_chars(PROGRESS_CHARS);
+
     let files = walk_dir(input_dir);
-    // document counter
-    let doc_id_mutex = Mutex::new(0);
-    // postings list
-    let postings: Mutex<Vec<PostingsList>> = Mutex::new(Vec::new());
-    // word to postings index
-    let term_index_map = Mutex::new(HashMap::new());
-    // per-word doc id to posting list index
-    let term_doc_map: Mutex<Vec<HashMap<u32, usize>>> = Mutex::new(Vec::new());
-    // documents data
-    let documents = Mutex::new(Vec::new());
 
-    files
+    println!("- Pre-processing phase");
+    let processed_documents: Vec<(String, Vec<String>)> = files
         .into_par_iter()
-        .progress_with_style(
-            ProgressStyle::with_template(PROGRESS_STYLE)
-                .unwrap()
-                .progress_chars(PROGRESS_CHARS),
-        )
-        .for_each(|d| {
-            let file_content: String =
-                fs::read_to_string(d.path()).expect("error while reading file");
-            let tokens = preprocessor.tokenize_and_stem(&file_content);
+        .progress_with_style(iterator_style.clone())
+        .map(|d| {
+            let file_content = fs::read_to_string(d.path()).expect("error while reading file");
+            (
+                d.path().to_str().unwrap().to_string(),
+                preprocessor.tokenize_and_stem(&file_content),
+            )
+        })
+        .collect();
 
-            let mut doc_id = doc_id_mutex.lock().unwrap();
+    println!("- Indexing phase");
 
-            // update documents array
-            documents.lock().unwrap().push(Document {
-                path: d.path().to_str().unwrap().to_string(),
-                length: tokens.len() as u32,
-            });
+    // document counter
+    let mut doc_id = 0;
+    // postings list
+    let mut postings = Vec::new();
+    // word to postings index
+    let mut term_index_map = FxHashMap::default();
+    // per-word doc id to posting list index
+    let mut term_doc_map: Vec<FxHashMap<u32, usize>> = Vec::new();
+    // documents data
+    let mut documents = Vec::new();
 
-            let mut l_term_index_map = term_index_map.lock().unwrap();
-            let mut l_postings = postings.lock().unwrap();
-            let mut l_term_doc_map = term_doc_map.lock().unwrap();
+    let processed_docs_iterator = processed_documents
+        .into_iter()
+        .progress_with_style(iterator_style);
 
-            for (word_pos, t) in tokens.iter().enumerate() {
-                // obtain postings for this word and increment collection frequency
-                if !l_term_index_map.contains_key(t) {
-                    let idx = l_term_index_map.len();
-                    l_term_index_map.insert(t.clone(), idx);
-                    l_postings.push(PostingsList::new());
-                    l_term_doc_map.push(HashMap::new());
-                }
-                let term_index = *l_term_index_map.get(t).unwrap();
-
-                // obtain document entry for this word and update it
-                let postings_list = &mut l_postings[term_index];
-                if !l_term_doc_map[term_index].contains_key(&doc_id) {
-                    let idx = postings_list.len();
-                    l_term_doc_map[term_index].insert(*doc_id, idx);
-                    postings_list.push(Posting::default());
-                }
-                let posting_entry_index = *l_term_doc_map[term_index].get(&doc_id).unwrap();
-
-                let posting_entry = &mut postings_list[posting_entry_index];
-
-                posting_entry.document_frequency += 1;
-                posting_entry.document_id = *doc_id;
-                posting_entry.positions.push(word_pos as u32);
-            }
-            *doc_id += 1;
+    for (path, tokens) in processed_docs_iterator {
+        // update documents array
+        documents.push(Document {
+            path,
+            length: tokens.len() as u32,
         });
 
-    let final_postings = postings.into_inner().unwrap();
+        for (word_pos, t) in tokens.iter().enumerate() {
+            // obtain postings for this word and increment collection frequency
+            if !term_index_map.contains_key(t) {
+                let idx = term_index_map.len();
+                term_index_map.insert(t.clone(), idx);
+                postings.push(PostingsList::new());
+                term_doc_map.push(FxHashMap::default());
+            }
+            let term_index = *term_index_map.get(t).unwrap();
 
-    let frequency_threshold =
-        (doc_id_mutex.into_inner().unwrap() as f64 * max_freq_percentage_threshold) as u32;
+            // obtain document entry for this word and update it
+            let postings_list = &mut postings[term_index];
+            if let Entry::Vacant(e) = term_doc_map[term_index].entry(doc_id) {
+                let idx = postings_list.len();
+                e.insert(idx);
+                postings_list.push(Posting::default());
+            }
+            let posting_entry_index = *term_doc_map[term_index].get(&doc_id).unwrap();
 
-    let sorted_term_index_map: BTreeMap<String, usize> = term_index_map
-        .into_inner()
-        .unwrap()
+            let posting_entry = &mut postings_list[posting_entry_index];
+
+            posting_entry.document_frequency += 1;
+            posting_entry.document_id = doc_id;
+            posting_entry.positions.push(word_pos as u32);
+        }
+        doc_id += 1;
+    }
+
+    let frequency_threshold = (doc_id as f64 * max_freq_percentage_threshold) as u32;
+
+    let term_index_map: BTreeMap<String, usize> = term_index_map
         .into_iter()
         .filter(|(_, v)| {
-            let f = final_postings[*v].len() as u32;
+            let f = postings[*v].len() as u32;
             f <= frequency_threshold && f > min_freq_threshold
         })
         .collect();
 
     InMemory {
-        term_index_map: sorted_term_index_map,
-        postings: final_postings,
-        documents: documents.into_inner().unwrap(),
+        term_index_map,
+        postings,
+        documents,
     }
 }
