@@ -12,8 +12,9 @@ use indicatif::{ParallelProgressIterator, ProgressIterator, ProgressStyle};
 use rayon::prelude::*;
 use std::{
     collections::{hash_map::Entry, BTreeMap},
-    fs,
+    fs::{self},
 };
+use walkdir::DirEntry;
 
 const PROGRESS_STYLE: &str =
     "Documents per second: {per_sec:<3}\n\n[{elapsed_precise}] [{bar:50}] {pos}/{len} [{eta_precise}]";
@@ -56,13 +57,7 @@ fn build_in_memory(
     let processed_documents: Vec<(String, Vec<String>)> = files
         .into_par_iter()
         .progress_with_style(iterator_style.clone())
-        .map(|d| {
-            let file_content = fs::read_to_string(d.path()).expect("error while reading file");
-            (
-                d.path().to_str().unwrap().to_string(),
-                preprocessor.tokenize_and_stem(&file_content),
-            )
-        })
+        .filter_map(|d| process_document(d, preprocessor))
         .collect();
 
     println!("- Indexing phase");
@@ -131,5 +126,23 @@ fn build_in_memory(
         term_index_map,
         postings,
         documents,
+    }
+}
+
+fn process_document(
+    dir_entry: DirEntry,
+    preprocessor: &Preprocessor,
+) -> Option<(String, Vec<String>)> {
+    let file_path = dir_entry.path();
+    match fs::read_to_string(file_path) {
+        Ok(file_content) => Some((
+            dir_entry.path().to_str().unwrap().to_string(),
+            preprocessor.tokenize_and_stem(&file_content),
+        )),
+        Err(err) => {
+            // Print an error message including the file path
+            eprintln!("Error reading file {:?}: {}", file_path, err);
+            None
+        }
     }
 }

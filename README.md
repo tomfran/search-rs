@@ -122,6 +122,7 @@ example
 ```
 
 The builder will walk recursively down the input folder, skipping hidden ones.
+The indexer will skip and show an error for non UTF-8 files.
 
 **Load a document collection**
 
