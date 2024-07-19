@@ -25,7 +25,7 @@ impl Documents {
                 let p_len = reader.read_gamma();
                 let prefix: String = prev.chars().take(p_len as usize).collect();
                 let path = prefix + &reader.read_str();
-                prev = path.clone();
+                prev.clone_from(&path);
 
                 let length = reader.read_vbyte();
                 length_sum += length;
