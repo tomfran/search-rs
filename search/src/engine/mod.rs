@@ -2,6 +2,7 @@ mod builder;
 mod documents;
 mod heap;
 mod postings;
+mod postings_cache;
 mod preprocessor;
 mod utils;
 mod vocabulary;

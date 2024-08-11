@@ -1,10 +1,12 @@
 use std::cmp::min;
 
-use super::{InMemory, OFFSETS_EXTENSION, POSTINGS_EXTENSION};
+use super::{postings_cache::PostingsCache, InMemory, OFFSETS_EXTENSION, POSTINGS_EXTENSION};
 use crate::disk::{bits_reader::BitsReader, bits_writer::BitsWriter};
 use std::cmp::Ordering::{Equal, Greater, Less};
 
-#[derive(Default)]
+pub const POSTINGS_CACHE_CAPACITY: usize = 10;
+
+#[derive(Default, Clone)]
 pub struct Posting {
     pub document_id: u32,
     pub document_frequency: u32,
@@ -16,6 +18,7 @@ pub type DocumentIdsList = Vec<u32>;
 
 pub struct Postings {
     reader: BitsReader,
+    cache: PostingsCache,
     offsets: Vec<u64>,
 }
 
@@ -34,8 +37,13 @@ impl Postings {
 
         let path = input_path.to_string() + POSTINGS_EXTENSION;
         let reader = BitsReader::new(&path);
+        let cache = PostingsCache::new();
 
-        Postings { reader, offsets }
+        Postings {
+            reader,
+            cache,
+            offsets,
+        }
     }
 
     pub fn write_postings(index: &InMemory, output_path: &str) {
@@ -79,6 +87,10 @@ impl Postings {
     }
 
     pub fn load_postings_list(&mut self, index: usize) -> PostingsList {
+        if let Some(cached) = self.cache.get(index) {
+            return cached.clone();
+        }
+
         self.reader.seek(self.offsets[index]);
 
         let n = self.reader.read_vbyte();
@@ -97,6 +109,8 @@ impl Postings {
                 }
             })
             .collect();
+
+        self.cache.put(index, documents.clone());
 
         documents
     }
